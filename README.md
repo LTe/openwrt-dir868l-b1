@@ -25,9 +25,10 @@ tree at a pinned commit and verified by sha256.
 Needs the usual [OpenWrt build prerequisites](https://openwrt.org/docs/guide-developer/toolchain/install-buildsystem).
 
     make            # first build compiles the toolchain too; count on an hour or more
-    ls out/         # openwrt-bcm53xx-generic-dlink_dir-868l-b1-squashfs.bin (sysupgrade) + factory image
+    ls out/         # openwrt-bcm53xx-generic-dlink_dir-868l-b1-squashfs.bin + manifest + sha256sums
 
-Flash the sysupgrade image through LuCI/`sysupgrade`, or the factory image through the stock web UI.
+The image is a SEAMA container: the stock D-Link web UI accepts it as a firmware update, and on
+OpenWrt it is the `sysupgrade` image.
 
 Useful knobs: `make menuconfig` then `make image`; `make saveconfig` to persist the config delta;
 `V=s` for a verbose build; `TOOLCHAIN_DIR=$(scripts/get-toolchain.sh)` to use OpenWrt's prebuilt
