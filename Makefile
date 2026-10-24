@@ -35,7 +35,7 @@ config: feeds
 	cp config.seed $(OPENWRT)/.config
 ifneq ($(TOOLCHAIN_DIR),)
 	echo CONFIG_DEVEL=y >> $(OPENWRT)/.config
-	cd $(OPENWRT) && ./scripts/ext-toolchain.sh --toolchain $(TOOLCHAIN_DIR)/toolchain-* --overwrite-config --config $(TARGET)
+	cd $(OPENWRT) && ./scripts/ext-toolchain.sh --toolchain $(abspath $(TOOLCHAIN_DIR))/toolchain-* --overwrite-config --config $(TARGET)
 endif
 	$(MAKE) -C $(OPENWRT) defconfig
 
