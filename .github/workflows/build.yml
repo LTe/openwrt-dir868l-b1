@@ -10,8 +10,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    # upstream's build container: prebuilt host tools under /prebuilt_tools, user buildbot
-    container: ghcr.io/openwrt/tools:main
+    # upstream's build container (tag latest = main branch): prebuilt host tools under /prebuilt_tools, user buildbot
+    container: ghcr.io/openwrt/tools:latest
     permissions:
       contents: write
     steps:
