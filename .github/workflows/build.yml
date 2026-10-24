@@ -57,9 +57,8 @@ jobs:
     permissions:
       contents: write
     env:
-      # upstream's build container (tag latest = main): all build dependencies, user buildbot (uid
-      # 1000 = the runner's uid, so files it writes in the workspace are ours; its entrypoint switches
-      # to it, so no -u).  Run through
+      # upstream's build container (tag latest = main): all build dependencies; its entrypoint
+      # switches to user buildbot (uid 1000; the runner is 1001, hence the chowns).  Run through
       # `docker run` rather than as a container job so the host's disk can be cleaned first: a
       # build needs ~15 GB and a hosted runner has about that free.  Its /prebuilt_tools match
       # upstream HEAD, not our pinned commit, so host tools are built here (~15 min); the target
@@ -111,16 +110,19 @@ jobs:
           echo "RUN=docker run --rm -v $PWD:$PWD -w $PWD $TOOLS" >> "$GITHUB_ENV"
 
       - name: Prepare (prebuilt toolchain, patches, feed, config)
-        run: $RUN make prepare TOOLCHAIN_DIR="$(scripts/get-toolchain.sh)"
+        run: |
+          sudo chown -R 1000:1000 .
+          $RUN make prepare TOOLCHAIN_DIR="$(scripts/get-toolchain.sh)"
 
       - name: Build
         run: $RUN make image || $RUN make image NPROC=1 V=s 2>&1 | tail -n 3000
 
-      - name: Disk usage
+      - name: Disk usage, take the results back
         if: always()
         run: |
           df -h / | tail -n 1
           du -sh openwrt/build_dir openwrt/staging_dir openwrt/dl openwrt/tmp toolchain 2>/dev/null || true
+          sudo chown -R "$(id -u):$(id -g)" .git out 2>/dev/null || true
 
       - name: Upload firmware
         uses: actions/upload-artifact@v4
