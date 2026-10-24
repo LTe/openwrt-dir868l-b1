@@ -53,14 +53,28 @@ jobs:
   build:
     needs: check
     if: needs.check.outputs.build == 'true'
-    runs-on: ubuntu-latest
-    # upstream's build container (tag latest = main): all build dependencies, user buildbot.  Its
-    # /prebuilt_tools match upstream HEAD, not our pinned commit, so host tools are built here
-    # (~15 min); the target toolchain comes prebuilt from downloads.openwrt.org instead.
-    container: ghcr.io/openwrt/tools:latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
+    env:
+      # upstream's build container (tag latest = main): all build dependencies, user buildbot (uid
+      # 1000 = the runner's uid, so files it writes in the workspace are ours; its entrypoint switches
+      # to it, so no -u).  Run through
+      # `docker run` rather than as a container job so the host's disk can be cleaned first: a
+      # build needs ~15 GB and a hosted runner has about that free.  Its /prebuilt_tools match
+      # upstream HEAD, not our pinned commit, so host tools are built here (~15 min); the target
+      # toolchain comes prebuilt from downloads.openwrt.org instead.
+      TOOLS: ghcr.io/openwrt/tools:latest
     steps:
+      - name: Free disk space
+        run: |
+          df -h / | tail -n 1
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup \
+            /opt/hostedtoolcache/CodeQL /usr/share/swift /usr/local/share/powershell /usr/lib/jvm \
+            /usr/local/julia* /usr/share/miniconda /opt/az /usr/local/share/boost /opt/microsoft
+          sudo docker image prune -af >/dev/null
+          df -h / | tail -n 1
+
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -91,18 +105,22 @@ jobs:
           echo "version=$(./scripts/getver.sh)" | tee -a "$GITHUB_OUTPUT"
           echo "sha=$(git rev-parse HEAD)" | tee -a "$GITHUB_OUTPUT"
 
-      - name: Fix permissions
+      - name: Build container
         run: |
-          chown -R buildbot:buildbot .
-          git config --global --add safe.directory '*'   # later root steps read the buildbot-owned checkout
+          docker pull -q "$TOOLS"
+          echo "RUN=docker run --rm -v $PWD:$PWD -w $PWD $TOOLS" >> "$GITHUB_ENV"
 
       - name: Prepare (prebuilt toolchain, patches, feed, config)
-        shell: su buildbot -c "sh -e {0}"
-        run: make prepare TOOLCHAIN_DIR="$(scripts/get-toolchain.sh)"
+        run: $RUN make prepare TOOLCHAIN_DIR="$(scripts/get-toolchain.sh)"
 
       - name: Build
-        shell: su buildbot -c "sh -e {0}"
-        run: make image || make image NPROC=1 V=s
+        run: $RUN make image || $RUN make image NPROC=1 V=s 2>&1 | tail -n 3000
+
+      - name: Disk usage
+        if: always()
+        run: |
+          df -h / | tail -n 1
+          du -sh openwrt/build_dir openwrt/staging_dir openwrt/dl openwrt/tmp toolchain 2>/dev/null || true
 
       - name: Upload firmware
         uses: actions/upload-artifact@v4
