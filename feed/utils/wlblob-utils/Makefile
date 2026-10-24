@@ -6,7 +6,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=wlblob-utils
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 PKG_LICENSE:=GPL-2.0-only
 
 include $(INCLUDE_DIR)/package.mk
@@ -16,7 +16,7 @@ define Package/wlblob-utils
   CATEGORY:=Network
   SUBMENU:=Wireless
   TITLE:=netifd integration for kmod-brcm-wl-blob (DIR-868L B1)
-  DEPENDS:=@TARGET_bcm53xx +kmod-brcm-wl-blob +brcm-wl-tools
+  DEPENDS:=@TARGET_bcm53xx +kmod-brcm-wl-blob +brcm-wl-tools +wifi-scripts
 endef
 
 define Package/wlblob-utils/description
