@@ -31,14 +31,9 @@ jobs:
           ln -s /prebuilt_tools/build_dir/host openwrt/build_dir/host
           cd openwrt && ./scripts/ext-tools.sh --refresh
 
-      - name: Prebuilt toolchain
-        id: toolchain
+      - name: Prepare (prebuilt toolchain, patches, feed, config)
         shell: su buildbot -c "sh -e {0}"
-        run: echo "dir=$(scripts/get-toolchain.sh)" >> "$GITHUB_OUTPUT"
-
-      - name: Prepare (patches, feed, config)
-        shell: su buildbot -c "sh -e {0}"
-        run: make prepare TOOLCHAIN_DIR=${{ steps.toolchain.outputs.dir }}
+        run: make prepare TOOLCHAIN_DIR="$(scripts/get-toolchain.sh)"
 
       - name: Build
         shell: su buildbot -c "sh -e {0}"
