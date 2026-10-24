@@ -86,23 +86,19 @@ jobs:
           git -C openwrt checkout -q FETCH_HEAD
 
       # actions/checkout clones the submodule with depth 1, which leaves scripts/getver.sh (the
-      # rNNNNN revision number in the version string) without history to count.  Fetch the commit
-      # graph only (no trees, no blobs): a few tens of MB.
+      # rNNNNN revision number in the version string) nothing to count.  Count in a separate
+      # commit-graph-only clone (no trees, no blobs: ~40 MB) and hand the result to getver.sh
+      # through the `version` file it reads first.
       - name: OpenWrt version
         id: ver
         run: |
-          cd openwrt
-          git config remote.origin.fetch '+refs/heads/main:refs/remotes/origin/main'
-          if [ "$(git rev-parse --is-shallow-repository)" = true ]; then
-            git fetch -q --unshallow --filter=tree:0 origin main
-          else
-            git fetch -q --filter=tree:0 origin main
-          fi
-          # getver.sh wants main@{u} to find the upstream base; HEAD is detached here
-          git config branch.main.remote origin
-          git config branch.main.merge refs/heads/main
-          echo "version=$(./scripts/getver.sh)" | tee -a "$GITHUB_OUTPUT"
-          echo "sha=$(git rev-parse HEAD)" | tee -a "$GITHUB_OUTPUT"
+          sha=$(git -C openwrt rev-parse HEAD)
+          git clone -q --bare --filter=tree:0 --single-branch --branch main "$UPSTREAM" /tmp/owrt-graph
+          n=$(git -C /tmp/owrt-graph rev-list --count ee53a240ac902dc83209008a2671e7fdcf55957a..$sha)
+          ver="r$n-$(git -C /tmp/owrt-graph rev-parse --short=10 $sha)"
+          echo "$ver" > openwrt/version
+          echo "version=$ver" | tee -a "$GITHUB_OUTPUT"
+          echo "sha=$sha" | tee -a "$GITHUB_OUTPUT"
 
       - name: Build container
         run: |
