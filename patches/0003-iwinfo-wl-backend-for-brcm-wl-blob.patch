@@ -1,0 +1,61 @@
+iwinfo: build the wl backend when kmod-brcm-wl-blob is selected
+
+Also provide the htmode/center_chan2 operations rpcd calls unconditionally
+(otherwise rpcd dereferences NULL and LuCI wireless status times out).
+
+diff --git a/package/network/utils/iwinfo/Makefile b/package/network/utils/iwinfo/Makefile
+index bc79992138..4d13450a64 100644
+--- a/package/network/utils/iwinfo/Makefile
++++ b/package/network/utils/iwinfo/Makefile
+@@ -83,7 +83,7 @@ MAKE_FLAGS += \
+ 	FPIC="$(FPIC)" \
+ 	CFLAGS="$(TARGET_CFLAGS) $(TARGET_CPPFLAGS)" \
+ 	LDFLAGS="$(TARGET_LDFLAGS)" \
+-	BACKENDS="nl80211" \
++	BACKENDS="nl80211$(if $(CONFIG_PACKAGE_kmod-brcm-wl-blob), wl)" \
+ 	SOVERSION="$(IWINFO_ABI_VERSION)"
+ 
+ define Build/InstallDev
+diff --git a/package/network/utils/iwinfo/patches/200-wl-add-htmode-center-chan2.patch b/package/network/utils/iwinfo/patches/200-wl-add-htmode-center-chan2.patch
+new file mode 100644
+index 0000000000..95f196bb45
+--- /dev/null
++++ b/package/network/utils/iwinfo/patches/200-wl-add-htmode-center-chan2.patch
+@@ -0,0 +1,37 @@
++--- a/iwinfo_wl.c
+++++ b/iwinfo_wl.c
++@@ -742,12 +742,34 @@ static int wl_get_frequency_offset(const
++ 	return -1;
++ }
++ 
+++
+++static int wl_get_htmode(const char *ifname, int *buf)
+++{
+++	char tmp[32] = "chanspec";
+++	unsigned int cs;
+++
+++	if (wl_ioctl(ifname, WLC_GET_VAR, tmp, sizeof(tmp)))
+++		return -1;
+++
+++	memcpy(&cs, tmp, sizeof(cs));
+++	switch (cs & 0x3800) {
+++	case 0x1000: *buf = IWINFO_HTMODE_HT20;   break;
+++	case 0x1800: *buf = IWINFO_HTMODE_HT40;   break;
+++	case 0x2000: *buf = IWINFO_HTMODE_VHT80;  break;
+++	case 0x2800: *buf = IWINFO_HTMODE_VHT160; break;
+++	default: return -1;
+++	}
+++	return 0;
+++}
+++
++ const struct iwinfo_ops wl_ops = {
++ 	.name             = "wl",
++ 	.probe            = wl_probe,
++ 	.channel          = wl_get_channel,
++ 	.center_chan1     = wl_get_center_chan1,
++ 	.center_chan2     = wl_get_center_chan2,
+++	.htmode           = wl_get_htmode,
+++	.center_chan2     = wl_get_center_chan2,
++ 	.frequency        = wl_get_frequency,
++ 	.frequency_offset = wl_get_frequency_offset,
++ 	.txpower          = wl_get_txpower,

@@ -1,0 +1,58 @@
+name: Build firmware
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # upstream's build container: prebuilt host tools under /prebuilt_tools, user buildbot
+    container: ghcr.io/openwrt/tools:main
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Fix permissions
+        run: chown -R buildbot:buildbot .
+
+      - name: Prebuilt host tools
+        shell: su buildbot -c "sh -e {0}"
+        run: |
+          mkdir -p openwrt/staging_dir openwrt/build_dir
+          ln -s /prebuilt_tools/staging_dir/host openwrt/staging_dir/host
+          ln -s /prebuilt_tools/build_dir/host openwrt/build_dir/host
+          cd openwrt && ./scripts/ext-tools.sh --refresh
+
+      - name: Prebuilt toolchain
+        id: toolchain
+        shell: su buildbot -c "sh -e {0}"
+        run: echo "dir=$(scripts/get-toolchain.sh)" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare (patches, feed, config)
+        shell: su buildbot -c "sh -e {0}"
+        run: make prepare TOOLCHAIN_DIR=${{ steps.toolchain.outputs.dir }}
+
+      - name: Build
+        shell: su buildbot -c "sh -e {0}"
+        run: make image || make image NPROC=1 V=s
+
+      - name: Upload firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: openwrt-dir868l-b1
+          path: out/
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: out/*
+          generate_release_notes: true

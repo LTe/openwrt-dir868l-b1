@@ -1,0 +1,31 @@
+#!/bin/sh
+# (Re)start eapd + nas for the wl radios and join the station radios.
+#
+# Called in the background by the netifd driver (/lib/netifd/wireless/wlblob.sh) with a token.
+# eapd and nas read the interface list from nvram once at startup, and a station's 4-way
+# handshake must not be interrupted, so one `wifi` run that configures both radios has to restart
+# them once, after the last radio: every call waits 3 s and only the one holding the newest token
+# goes on.
+stamp=/var/run/wlblob.daemons
+tok="$1"
+sleep 3
+[ -z "$tok" ] || [ "$(cat $stamp 2>/dev/null)" = "$tok" ] || exit 0
+
+killall nas 2>/dev/null
+killall eapd 2>/dev/null
+sleep 1
+# eapd does not fork and dies on SIGHUP, hence setsid; nas daemonises itself (stdout stays open)
+(setsid /usr/sbin/eapd </dev/null >/dev/null 2>&1 &)
+sleep 1
+nas >/dev/null 2>&1
+sleep 1
+
+# stations associate only now: nas must see the driver's LINK event before EAPOL message 1 arrives
+for w in /sys/class/net/wl[0-9]; do
+	w="${w##*/}"
+	[ "$(wlnvram get ${w}_mode)" = sta ] || continue
+	[ "$(wlnvram get ${w}_bss_enabled)" = 1 ] || continue
+	b="$(wlnvram get ${w}_bssid)"
+	[ -n "$b" ] && wl -i "$w" bssid "$b" >/dev/null 2>&1
+	wl -i "$w" ssid "$(wlnvram get ${w}_ssid)" >/dev/null 2>&1
+done

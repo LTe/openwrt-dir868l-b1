@@ -1,0 +1,19 @@
+#!/bin/sh /etc/rc.common
+# Build /tmp/wl-nvram.txt (radio calibration + per-device MACs) for the wl driver.
+# /lib/firmware/brcm/wl-nvram.txt is a symlink to it.
+START=14
+start() {
+	local dd=$(grep -lx devdata /sys/class/mtd/mtd*/name 2>/dev/null | head -n1 | sed 's|/sys/class/mtd/\(mtd[0-9]*\)/name|/dev/\1ro|')
+	local m24 m5
+	[ -n "$dd" ] && {
+		m24=$(strings "$dd" | sed -n 's/^wlan24mac=//p' | head -n1)
+		m5=$(strings "$dd" | sed -n 's/^wlan5mac=//p' | head -n1)
+	}
+	[ -n "$m24" ] || m24=$(cat /sys/class/net/eth0/address 2>/dev/null)
+	[ -n "$m5" ] || m5=$m24
+	{
+		cat /usr/share/wlblob/wl-nvram.tmpl
+		echo "0:macaddr=$m24"
+		echo "1:macaddr=$m5"
+	} > /tmp/wl-nvram.txt
+}

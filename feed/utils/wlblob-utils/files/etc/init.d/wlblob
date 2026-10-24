@@ -1,0 +1,21 @@
+#!/bin/sh /etc/rc.common
+# Load the re-linked Broadcom wl core: take the radios away from b43/bcma-pci-bridge first.
+START=19
+start() {
+	[ -d /sys/module/wl ] && return 0
+	rmmod b43 2>/dev/null
+	local d
+	for d in /sys/bus/pci/drivers/bcma-pci-bridge/0*; do
+		[ -e "$d" ] || continue
+		[ "$(cat $d/vendor 2>/dev/null)" = "0x14e4" ] && echo "${d##*/}" > /sys/bus/pci/drivers/bcma-pci-bridge/unbind
+	done
+	/etc/init.d/wl-nvram start
+	modprobe wl
+	local n=0
+	while [ $n -lt 20 ] && [ ! -d /sys/class/net/wl0 ]; do sleep 1; n=$((n+1)); done
+}
+stop() {
+	wifi down 2>/dev/null
+	killall nas eapd 2>/dev/null
+	rmmod wl 2>/dev/null
+}

@@ -1,0 +1,318 @@
+bcm53xx: add support for D-Link DIR-868L B1
+
+Device support as submitted upstream in openwrt/openwrt#20684; dropped once merged.
+
+---
+ package/boot/uboot-bcm53xx/Makefile           |   7 +-
+ .../base-files/etc/uci-defaults/09_fix_crc    |   1 +
+ .../base-files/lib/upgrade/platform.sh        |   1 +
+ target/linux/bcm53xx/image/Makefile           |  13 +
+ ...M5301X-Add-DT-for-D-Link-DIR-868L-B1.patch | 225 ++++++++++++++++++
+ 5 files changed, 246 insertions(+), 1 deletion(-)
+ create mode 100644 target/linux/bcm53xx/patches-6.12/351-ARM-dts-BCM5301X-Add-DT-for-D-Link-DIR-868L-B1.patch
+
+diff --git a/package/boot/uboot-bcm53xx/Makefile b/package/boot/uboot-bcm53xx/Makefile
+index 73af7cb640..1981e7796e 100644
+--- a/package/boot/uboot-bcm53xx/Makefile
++++ b/package/boot/uboot-bcm53xx/Makefile
+@@ -19,12 +19,17 @@ define U-Boot/dir-885l
+   BUILD_DEVICES:=dlink_dir-885l
+ endef
+ 
++define U-Boot/dir-868l-b1
++  NAME:=D-Link DIR-868L B1
++  BUILD_DEVICES:=dlink_dir-868l-b1
++endef
++
+ define U-Boot/dir-890l
+   NAME:=D-Link DIR-890L
+   BUILD_DEVICES:=dlink_dir-890l
+ endef
+ 
+-UBOOT_TARGETS := dir-885l dir-890l
++UBOOT_TARGETS := dir-868l-b1 dir-885l dir-890l
+ 
+ define Build/InstallDev
+ 	$(INSTALL_DIR) $(STAGING_DIR_IMAGE)
+diff --git a/target/linux/bcm53xx/base-files/etc/uci-defaults/09_fix_crc b/target/linux/bcm53xx/base-files/etc/uci-defaults/09_fix_crc
+index c39625b865..7f10235df1 100644
+--- a/target/linux/bcm53xx/base-files/etc/uci-defaults/09_fix_crc
++++ b/target/linux/bcm53xx/base-files/etc/uci-defaults/09_fix_crc
+@@ -13,6 +13,7 @@ fixseama() {
+ }
+ 
+ case "$board" in
++dlink,dir-868l-b1 | \
+ dlink,dir-885l | \
+ dlink,dir-890l)
+ 	fixseama
+diff --git a/target/linux/bcm53xx/base-files/lib/upgrade/platform.sh b/target/linux/bcm53xx/base-files/lib/upgrade/platform.sh
+index dfa333af8b..1523bd09ec 100644
+--- a/target/linux/bcm53xx/base-files/lib/upgrade/platform.sh
++++ b/target/linux/bcm53xx/base-files/lib/upgrade/platform.sh
+@@ -37,6 +37,7 @@ platform_expected_image() {
+ 	local machine=$(board_name)
+ 
+ 	case "$machine" in
++		"dlink,dir-868l-b1")	echo "seamaseal wrgac02_dlink.2013gui_dir868lb"; return;;
+ 		"dlink,dir-885l")	echo "seamaseal wrgac42_dlink.2015_dir885l"; return;;
+ 		"dlink,dir-890l")	echo "seamaseal wrgac36_dlink.2013gui_dir890"; return;;
+ 		"luxul,abr-4500-v1")	echo "lxl ABR-4500"; return;;
+diff --git a/target/linux/bcm53xx/image/Makefile b/target/linux/bcm53xx/image/Makefile
+index 9bfab59dcc..eb4fc175eb 100644
+--- a/target/linux/bcm53xx/image/Makefile
++++ b/target/linux/bcm53xx/image/Makefile
+@@ -291,6 +291,19 @@ define Device/dlink
+   IMAGE/bin := append-ubi | seama-nand
+ endef
+ 
++define Device/dlink_dir-868l-b1
++  DEVICE_MODEL := DIR-868L
++  DEVICE_VARIANT := B1
++  DEVICE_PACKAGES := $(USB3_PACKAGES)
++  # CFE only decompresses the first 2 MB from the SEAMA entity on NAND.
++  # The compressed kernel exceeds 2 MB, so we put U-Boot first and let
++  # U-Boot read and execute the kernel from UBI.
++  KERNEL := dlink-uboot-bin | pad-to 128k | append-kernel | append-dtb
++  $(Device/dlink)
++  SIGNATURE := wrgac02_dlink.2013gui_dir868lb
++endef
++TARGET_DEVICES += dlink_dir-868l-b1
++
+ define Device/dlink_dir-885l
+   DEVICE_MODEL := DIR-885L
+   DEVICE_PACKAGES := $(BRCMFMAC_4366B1) $(USB3_PACKAGES)
+diff --git a/target/linux/bcm53xx/patches-6.12/351-ARM-dts-BCM5301X-Add-DT-for-D-Link-DIR-868L-B1.patch b/target/linux/bcm53xx/patches-6.12/351-ARM-dts-BCM5301X-Add-DT-for-D-Link-DIR-868L-B1.patch
+new file mode 100644
+index 0000000000..733cf35ee6
+--- /dev/null
++++ b/target/linux/bcm53xx/patches-6.12/351-ARM-dts-BCM5301X-Add-DT-for-D-Link-DIR-868L-B1.patch
+@@ -0,0 +1,225 @@
++From: Piotr Nielacny <piotr.nielacny@gmail.com>
++Subject: [PATCH] ARM: dts: BCM5301X: Add DT for D-Link DIR-868L B1
++
++Add device tree for D-Link DIR-868L B1 wireless router based on
++BCM47081 SoC.
++
++Specifications:
++- SoC: Broadcom BCM47081 (ARM Cortex-A9, single core, 800 MHz)
++- RAM: 256 MB DDR2
++- Flash: 128 MB NAND (Spansion S34ML01G, BCH8 ECC) + 2 MB SPI NOR
++- WiFi: BCM4331 (2.4 GHz) + BCM4360 (5 GHz)
++- Ethernet: 5x GbE (4 LAN + 1 WAN) via integrated SRAB switch
++- USB: 1x USB 3.0
++- Firmware format: SEAMA
++
++Signed-off-by: Piotr Nielacny <piotr.nielacny@gmail.com>
++---
++
++--- a/arch/arm/boot/dts/broadcom/Makefile
+++++ b/arch/arm/boot/dts/broadcom/Makefile
++@@ -61,6 +61,7 @@ dtb-$(CONFIG_ARCH_BCM_5301X) += \
++ 	bcm47081-asus-rt-n18u.dtb \
++ 	bcm47081-buffalo-wzr-600dhp2.dtb \
++ 	bcm47081-buffalo-wzr-900dhp.dtb \
+++	bcm47081-dlink-dir-868l-b1.dtb \
++ 	bcm47081-luxul-xap-1410.dtb \
++ 	bcm47081-luxul-xwr-1200.dtb \
++ 	bcm47081-tplink-archer-c5-v2.dtb \
++--- /dev/null
+++++ b/arch/arm/boot/dts/broadcom/bcm47081-dlink-dir-868l-b1.dts
++@@ -0,0 +1,194 @@
+++// SPDX-License-Identifier: GPL-2.0-or-later OR MIT
+++
+++/dts-v1/;
+++
+++#include "bcm47081.dtsi"
+++#include "bcm5301x-nand-cs0-bch8.dtsi"
+++
+++/ {
+++	compatible = "dlink,dir-868l-b1", "brcm,bcm47081", "brcm,bcm4708";
+++	model = "D-Link DIR-868L B1";
+++
+++	chosen {
+++		bootargs = "console=ttyS0,115200";
+++	};
+++
+++	memory@0 {
+++		device_type = "memory";
+++		reg = <0x00000000 0x08000000>,
+++		      <0x88000000 0x08000000>;
+++	};
+++
+++	leds {
+++		compatible = "gpio-leds";
+++
+++		led-power-green {
+++			label = "green:power";
+++			gpios = <&chipcommon 2 GPIO_ACTIVE_LOW>;
+++			linux,default-trigger = "default-on";
+++		};
+++
+++		led-power-amber {
+++			label = "amber:power";
+++			gpios = <&chipcommon 0 GPIO_ACTIVE_LOW>;
+++		};
+++
+++		led-wan-amber {
+++			label = "amber:wan";
+++			gpios = <&chipcommon 1 GPIO_ACTIVE_LOW>;
+++		};
+++
+++		led-wan-green {
+++			label = "green:wan";
+++			gpios = <&chipcommon 3 GPIO_ACTIVE_LOW>;
+++		};
+++
+++		led-usb {
+++			label = "white:usb";
+++			gpios = <&chipcommon 10 GPIO_ACTIVE_LOW>;
+++			trigger-sources = <&ohci_port1>, <&ehci_port1>,
+++					  <&xhci_port1>;
+++			linux,default-trigger = "usbport";
+++		};
+++	};
+++
+++	gpio-keys {
+++		compatible = "gpio-keys";
+++
+++		button-wps {
+++			label = "WPS";
+++			linux,code = <KEY_WPS_BUTTON>;
+++			gpios = <&chipcommon 7 GPIO_ACTIVE_LOW>;
+++		};
+++
+++		button-restart {
+++			label = "Reset";
+++			linux,code = <KEY_RESTART>;
+++			gpios = <&chipcommon 11 GPIO_ACTIVE_LOW>;
+++		};
+++	};
+++
+++	nvram@1e1f0000 {
+++		compatible = "brcm,nvram";
+++		reg = <0x1e1f0000 0x10000>;
+++
+++		et0macaddr: et0macaddr {
+++			#nvmem-cell-cells = <1>;
+++		};
+++	};
+++};
+++
+++&spi_nor {
+++	status = "okay";
+++
+++	partitions {
+++		compatible = "fixed-partitions";
+++		#address-cells = <1>;
+++		#size-cells = <1>;
+++
+++		partition@0 {
+++			label = "u-boot";
+++			reg = <0x00000000 0x00040000>;
+++			read-only;
+++		};
+++
+++		partition@40000 {
+++			label = "devconf";
+++			reg = <0x00040000 0x00010000>;
+++			read-only;
+++		};
+++
+++		partition@50000 {
+++			label = "devdata";
+++			reg = <0x00050000 0x00010000>;
+++			read-only;
+++		};
+++
+++		partition@60000 {
+++			label = "mydlink";
+++			reg = <0x00060000 0x00170000>;
+++			read-only;
+++		};
+++
+++		partition@1d0000 {
+++			label = "langpack";
+++			reg = <0x001d0000 0x00020000>;
+++			read-only;
+++		};
+++
+++		partition@1f0000 {
+++			label = "nvram";
+++			reg = <0x001f0000 0x00010000>;
+++		};
+++	};
+++};
+++
+++&nandcs {
+++	partitions {
+++		compatible = "fixed-partitions";
+++		#address-cells = <1>;
+++		#size-cells = <1>;
+++
+++		partition@0 {
+++			compatible = "seama";
+++			label = "firmware";
+++			reg = <0x00000000 0x08000000>;
+++		};
+++	};
+++};
+++
+++&usb3 {
+++	status = "okay";
+++};
+++
+++&usb3_phy {
+++	status = "okay";
+++};
+++
+++&pcie0 {
+++	/delete-property/ ranges;
+++};
+++
+++&pcie1 {
+++	/delete-property/ ranges;
+++};
+++
+++&pcie2 {
+++	/delete-property/ ranges;
+++};
+++
+++&srab {
+++	status = "okay";
+++
+++	ports {
+++		port@0 {
+++			label = "lan1";
+++		};
+++
+++		port@1 {
+++			label = "lan2";
+++		};
+++
+++		port@2 {
+++			label = "lan3";
+++		};
+++
+++		port@3 {
+++			label = "lan4";
+++		};
+++
+++		port@4 {
+++			label = "wan";
+++		};
+++
+++		port@5 {
+++			label = "cpu";
+++			ethernet = <&gmac0>;
+++
+++			fixed-link {
+++				speed = <1000>;
+++				full-duplex;
+++			};
+++		};
+++	};
+++};
+-- 
+2.43.0
+

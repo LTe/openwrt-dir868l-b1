@@ -1,0 +1,11 @@
+# Seed for `make defconfig`: target/device, the wl driver stack and LuCI.
+CONFIG_TARGET_bcm53xx=y
+CONFIG_TARGET_bcm53xx_generic=y
+CONFIG_TARGET_bcm53xx_generic_DEVICE_dlink_dir-868l-b1=y
+CONFIG_PACKAGE_kmod-brcm-wl-blob=y
+CONFIG_PACKAGE_brcm-wl-tools=y
+CONFIG_PACKAGE_wlblob-utils=y
+CONFIG_PACKAGE_luci=y
+CONFIG_PACKAGE_luci-ssl=y
+# the in-kernel b43 driver cannot drive these radios and would grab them first
+# CONFIG_PACKAGE_kmod-b43 is not set

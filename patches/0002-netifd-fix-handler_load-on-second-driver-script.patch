@@ -1,0 +1,23 @@
+netifd: fix handler_load() looping on a second wireless driver script
+
+utils.uc keeps reading after EOF because the fs error flag is module-global; with two
+wireless driver scripts (mac80211 + wlblob) netifd never finishes loading. Worth upstreaming.
+
+diff --git a/package/network/config/netifd/files/lib/netifd/utils.uc b/package/network/config/netifd/files/lib/netifd/utils.uc
+index b038efc5fc..d53ff2861e 100644
+--- a/package/network/config/netifd/files/lib/netifd/utils.uc
++++ b/package/network/config/netifd/files/lib/netifd/utils.uc
+@@ -54,8 +54,11 @@ export function handler_load(path, cb)
+ 		system(`./${script} "" "dump" >&${f.fileno()}`);
+ 		chdir(prev_dir);
+ 		f.seek();
+-		while (!f.error()) {
+-			let data = trim(f.read("line"));
++		let line;
++		while ((line = f.read("line")) != null) {
++			let data = trim(line);
++			if (!length(data))
++				continue;
+ 			try {
+ 				data = json(data);
+ 			} catch (e) {
