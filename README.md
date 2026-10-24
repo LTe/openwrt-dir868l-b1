@@ -9,6 +9,43 @@ Nothing proprietary is stored in this repository.  At build time the driver core
 wl 6.37.14.126) and the `wl` control tool are downloaded from the public FreshTomato ARM source
 tree at a pinned commit and verified by sha256.
 
+## Download and install
+
+Ready-made images are on the [Releases](https://github.com/LTe/openwrt-dir868l-b1/releases) page:
+`openwrt-bcm53xx-generic-dlink_dir-868l-b1-squashfs.bin` plus its `sha256sums` and the package
+manifest.  The image includes LuCI (HTTP and HTTPS) and the WiFi stack for both radios.  One file
+serves every path below: it is a SEAMA container the D-Link bootloader and web UI accept, and on
+OpenWrt it is the `sysupgrade` image.
+
+### From the stock D-Link firmware
+
+1. Connect a PC by cable to a LAN port and log in to http://192.168.0.1.
+2. Tools → Firmware → Upload, select the `.bin`, start the upgrade.
+3. Wait about 3 minutes; do not power the router off.  It reboots into OpenWrt.
+
+### Recovery mode (from any firmware, also to go back to stock)
+
+1. Power the router off.  Hold the Reset button, power on, keep holding until the power LED
+   starts blinking (about 10 s), then release.
+2. Give the PC a static address such as 192.168.0.2/24 and open http://192.168.0.1: a plain
+   upload page served by the bootloader.
+3. Upload the `.bin` (or D-Link's stock `DIR868LB1_FW*.bin` to revert) and wait for the reboot.
+
+### From OpenWrt
+
+LuCI: System → Backup / Flash Firmware → Flash image.  Shell:
+
+    sysupgrade -n openwrt-bcm53xx-generic-dlink_dir-868l-b1-squashfs.bin
+
+Keeping settings is fine between releases of this repository; use `-n` (or untick "Keep settings")
+when coming from a different OpenWrt build.
+
+### First boot
+
+- LAN: http://192.168.1.1 (also https://), user `root`, no password; set one in System → Administration.
+- WiFi: both radios appear in Network → Wireless (`wlblob0` = 2.4 GHz, `wlblob1` = 5 GHz) and are
+  disabled; set an SSID and WPA2 key and enable them.  See "Using the WiFi" below.
+
 ## Layout
 
 | path | what |
@@ -18,7 +55,7 @@ tree at a pinned commit and verified by sha256.
 | `feed/` | an OpenWrt package feed: `kmod-brcm-wl-blob` (driver), `brcm-wl-tools` (nas, eapd, wlconf, wl, libnvram), `wlblob-utils` (netifd integration) |
 | `config.seed` | the `.config` delta: target, device, these packages, LuCI |
 | `Makefile` | glue: submodule, patches, feed, config, build, copy images to `out/` |
-| `.github/workflows/build.yml` | CI: same steps in upstream's build container with the prebuilt toolchain |
+| `.github/workflows/build.yml` | CI: same steps in upstream's build container with the prebuilt toolchain; publishes releases |
 
 ## Build
 
@@ -40,6 +77,16 @@ toolchain instead of building one.
     make prepare    # patches must still apply; drop patches/0001 once the device PR is merged
     make image
     git add openwrt && git commit -m "openwrt: bump"
+
+## Releases
+
+- Pushing a tag `v*` builds that commit in CI and publishes a release with the image attached.
+- Every Monday CI compares the pinned `openwrt` commit with upstream `main`.  If upstream moved,
+  it bumps the submodule, builds, and when the build succeeds commits the bump to `main` and
+  publishes a release tagged `openwrt-rNNNNN-<hash>` (the OpenWrt snapshot version).  A failed
+  build (patches that no longer apply, a kernel bump the driver glue does not handle yet) changes
+  nothing and shows up as a failed run.  The same can be started by hand: Actions → Build firmware
+  → Run workflow with "Bump" ticked.
 
 ## Using the WiFi
 

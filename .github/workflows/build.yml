@@ -5,10 +5,54 @@ on:
     branches: [main]
     tags: ['v*']
   pull_request:
+  # weekly: if upstream OpenWrt main moved, bump the submodule, build, and publish a release
+  schedule:
+    - cron: '0 3 * * 1'
   workflow_dispatch:
+    inputs:
+      bump:
+        description: Bump openwrt to upstream main and publish a release if it builds
+        type: boolean
+        default: false
+
+env:
+  UPSTREAM: https://github.com/openwrt/openwrt.git
 
 jobs:
+  # Decide what this run does.  Cheap: no container, no submodule.
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      build: ${{ steps.decide.outputs.build }}   # run the build at all
+      bump: ${{ steps.decide.outputs.bump }}     # move openwrt/ to this upstream commit first
+      release: ${{ steps.decide.outputs.release }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: decide
+        run: |
+          pinned=$(git rev-parse HEAD:openwrt)
+          case "${{ github.event_name }}" in
+            schedule|workflow_dispatch)
+              if [ "${{ github.event_name }}" = workflow_dispatch ] && [ "${{ inputs.bump }}" != true ]; then
+                echo "build=true" >> "$GITHUB_OUTPUT"; exit 0
+              fi
+              head=$(git ls-remote "$UPSTREAM" refs/heads/main | cut -f1)
+              echo "pinned $pinned, upstream main $head"
+              if [ "$head" = "$pinned" ]; then
+                echo "up to date, nothing to do"
+              else
+                echo "build=true" >> "$GITHUB_OUTPUT"
+                echo "bump=$head" >> "$GITHUB_OUTPUT"
+                echo "release=true" >> "$GITHUB_OUTPUT"
+              fi ;;
+            *)
+              echo "build=true" >> "$GITHUB_OUTPUT"
+              case "${{ github.ref }}" in refs/tags/v*) echo "release=true" >> "$GITHUB_OUTPUT";; esac ;;
+          esac
+
   build:
+    needs: check
+    if: needs.check.outputs.build == 'true'
     runs-on: ubuntu-latest
     # upstream's build container (tag latest = main): all build dependencies, user buildbot.  Its
     # /prebuilt_tools match upstream HEAD, not our pinned commit, so host tools are built here
@@ -22,8 +66,35 @@ jobs:
         with:
           submodules: true
 
+      - name: Bump openwrt to upstream main
+        if: needs.check.outputs.bump != ''
+        run: |
+          git -C openwrt fetch --depth 1 origin ${{ needs.check.outputs.bump }}
+          git -C openwrt checkout -q FETCH_HEAD
+
+      # actions/checkout clones the submodule with depth 1, which leaves scripts/getver.sh (the
+      # rNNNNN revision number in the version string) without history to count.  Fetch the commit
+      # graph only (no trees, no blobs): a few tens of MB.
+      - name: OpenWrt version
+        id: ver
+        run: |
+          cd openwrt
+          git config remote.origin.fetch '+refs/heads/main:refs/remotes/origin/main'
+          if [ "$(git rev-parse --is-shallow-repository)" = true ]; then
+            git fetch -q --unshallow --filter=tree:0 origin main
+          else
+            git fetch -q --filter=tree:0 origin main
+          fi
+          # getver.sh wants main@{u} to find the upstream base; HEAD is detached here
+          git config branch.main.remote origin
+          git config branch.main.merge refs/heads/main
+          echo "version=$(./scripts/getver.sh)" | tee -a "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse HEAD)" | tee -a "$GITHUB_OUTPUT"
+
       - name: Fix permissions
-        run: chown -R buildbot:buildbot .
+        run: |
+          chown -R buildbot:buildbot .
+          git config --global --add safe.directory '*'   # later root steps read the buildbot-owned checkout
 
       - name: Prepare (prebuilt toolchain, patches, feed, config)
         shell: su buildbot -c "sh -e {0}"
@@ -36,12 +107,46 @@ jobs:
       - name: Upload firmware
         uses: actions/upload-artifact@v4
         with:
-          name: openwrt-dir868l-b1
+          name: openwrt-dir868l-b1-${{ steps.ver.outputs.version }}
           path: out/
 
+      # A bump that built is committed to main (the token's push starts no new workflow run).
+      - name: Commit the bump
+        if: needs.check.outputs.bump != ''
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add openwrt
+          git commit -m "openwrt: bump to ${{ steps.ver.outputs.version }}"
+          git push origin HEAD:main
+
+      - name: Release notes
+        if: needs.check.outputs.release == 'true'
+        id: rel
+        run: |
+          ver='${{ steps.ver.outputs.version }}'
+          if [ -n '${{ needs.check.outputs.bump }}' ]; then
+            tag="openwrt-$ver"; title="OpenWrt snapshot $ver"
+            kind="Built automatically after upstream OpenWrt main moved to $ver; not tested on hardware."
+          else
+            tag='${{ github.ref_name }}'; title="$tag (OpenWrt $ver)"
+            kind="Built from the pinned OpenWrt snapshot $ver."
+          fi
+          { echo "$kind  Upstream commit: https://github.com/openwrt/openwrt/commit/${{ steps.ver.outputs.sha }}"
+            echo; cat .github/release-notes.md
+            echo; echo '```'; grep -E '\.(bin|manifest)$' out/sha256sums; echo '```'; } > notes.md
+          { echo "tag=$tag"; echo "title=$title"; echo "sha=$(git rev-parse HEAD)"; } | tee -a "$GITHUB_OUTPUT"
+
       - name: Release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: needs.check.outputs.release == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          files: out/*
-          generate_release_notes: true
+          tag_name: ${{ steps.rel.outputs.tag }}
+          target_commitish: ${{ steps.rel.outputs.sha }}
+          name: ${{ steps.rel.outputs.title }}
+          body_path: notes.md
+          fail_on_unmatched_files: true
+          files: |
+            out/*.bin
+            out/*.manifest
+            out/sha256sums
