@@ -10,7 +10,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    # upstream's build container (tag latest = main branch): prebuilt host tools under /prebuilt_tools, user buildbot
+    # upstream's build container (tag latest = main): all build dependencies, user buildbot.  Its
+    # /prebuilt_tools match upstream HEAD, not our pinned commit, so host tools are built here
+    # (~15 min); the target toolchain comes prebuilt from downloads.openwrt.org instead.
     container: ghcr.io/openwrt/tools:latest
     permissions:
       contents: write
@@ -22,14 +24,6 @@ jobs:
 
       - name: Fix permissions
         run: chown -R buildbot:buildbot .
-
-      - name: Prebuilt host tools
-        shell: su buildbot -c "sh -e {0}"
-        run: |
-          mkdir -p openwrt/staging_dir openwrt/build_dir
-          ln -s /prebuilt_tools/staging_dir/host openwrt/staging_dir/host
-          ln -s /prebuilt_tools/build_dir/host openwrt/build_dir/host
-          cd openwrt && ./scripts/ext-tools.sh --refresh
 
       - name: Prepare (prebuilt toolchain, patches, feed, config)
         shell: su buildbot -c "sh -e {0}"
