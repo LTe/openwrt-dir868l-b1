@@ -1,0 +1,256 @@
+iwinfo: implement native Broadcom scanning for LuCI
+
+Resolve UCI radio names, use WLC_SCAN and validate BSS records and IEs.
+Wait for scan completion instead of returning stale results.
+
+diff --git a/package/network/utils/iwinfo/Makefile b/package/network/utils/iwinfo/Makefile
+index 686ed73..3f94dfa 100644
+--- a/package/network/utils/iwinfo/Makefile
++++ b/package/network/utils/iwinfo/Makefile
+@@ -7,7 +7,7 @@
+ include $(TOPDIR)/rules.mk
+ 
+ PKG_NAME:=libiwinfo
+-PKG_RELEASE:=1
++PKG_RELEASE:=2
+ 
+ PKG_SOURCE_PROTO:=git
+ PKG_SOURCE_URL=$(PROJECT_GIT)/project/iwinfo.git
+diff --git a/package/network/utils/iwinfo/patches/202-wl-native-scan.patch b/package/network/utils/iwinfo/patches/202-wl-native-scan.patch
+new file mode 100644
+index 0000000..b7bcdab
+--- /dev/null
++++ b/package/network/utils/iwinfo/patches/202-wl-native-scan.patch
+@@ -0,0 +1,232 @@
++diff --git a/iwinfo_wl.c b/iwinfo_wl.c
++index 06e5809..a2d357d 100644
++--- a/iwinfo_wl.c
+++++ b/iwinfo_wl.c
++@@ -24,17 +24,38 @@
++ #include "iwinfo.h"
++ #include "api/broadcom.h"
++ 
+++#define WLC_SCAN 50
+++#define WLC_SCAN_RESULTS 51
+++
++ static int wl_ioctl(const char *name, int cmd, void *buf, int len)
++ {
++-	struct ifreq ifr;
++-	wl_ioctl_t ioc;
+++	struct ifreq ifr = { 0 };
+++	wl_ioctl_t ioc = { 0 };
+++	struct uci_section *radio;
+++	const char *ifname;
+++
+++	/* LuCI passes the wifi-device section, CLI users pass a netdev. */
+++	if (!if_nametoindex(name))
+++	{
+++		radio = iwinfo_uci_get_radio(name, "broadcom");
+++		ifname = radio ? uci_lookup_option_string(uci_ctx, radio, "ifname") : NULL;
+++		if (!ifname || strlen(ifname) >= IFNAMSIZ)
+++		{
+++			iwinfo_uci_free();
+++			return -1;
+++		}
+++		strcpy(ifr.ifr_name, ifname);
+++		iwinfo_uci_free();
+++	}
+++	else
+++		strncpy(ifr.ifr_name, name, IFNAMSIZ - 1);
++ 
++ 	/* do it */
++ 	ioc.cmd = cmd;
++ 	ioc.buf = buf;
++ 	ioc.len = len;
+++	ioc.set = (cmd == WLC_SCAN);
++ 
++-	strncpy(ifr.ifr_name, name, IFNAMSIZ);
++ 	ifr.ifr_data = (caddr_t) &ioc;
++ 
++ 	return iwinfo_ioctl(SIOCDEVPRIVATE, &ifr);
++@@ -590,9 +611,184 @@ static int wl_get_txpwrlist(const char *ifname, char *buf, int *len)
++ 	return 0;
++ }
++ 
+++/* wl 6.x scan ABI. Explicit padding also permits unaligned BSS records. */
+++#define WL_SCAN_BUFSIZE 65536
+++
+++struct wl_scan_params {
+++	wlc_ssid_t ssid;
+++	uint8_t bssid[6];
+++	int8_t bss_type;
+++	uint8_t scan_type;
+++	int32_t nprobes, active_time, passive_time, home_time, channel_num;
+++};
+++
+++struct wl_scan_bss {
+++	uint32_t version, length;
+++	uint8_t bssid[6];
+++	uint16_t beacon_period, capability;
+++	uint8_t ssid_len, ssid[32], pad1;
+++	uint32_t rate_count;
+++	uint8_t rates[16];
+++	uint16_t chanspec, atim_window;
+++	uint8_t dtim_period, pad2;
+++	int16_t rssi;
+++	int8_t noise;
+++	uint8_t n_cap, pad3[2];
+++	uint32_t nbss_cap;
+++	uint8_t ctl_ch, pad4[3];
+++	uint16_t vht_rxmcsmap, vht_txmcsmap;
+++	uint8_t flags, vht_cap, reserved[2], basic_mcs[16];
+++	uint16_t ie_offset, pad5;
+++	uint32_t ie_length;
+++} __attribute__((packed));
+++
+++struct wl_scan_results {
+++	uint32_t buflen, version, count;
+++	uint8_t records[];
+++};
+++
+++static int wl_scan_ies(uint8_t *ie, size_t len, struct iwinfo_scanlist_entry *e)
+++{
+++	while (len)
+++	{
+++		if (len < 2 || ie[1] > len - 2)
+++			return -1;
+++
+++		/* parse_rsn needs the version and group cipher (at least 6 bytes). */
+++		if (ie[0] == 48 && ie[1] >= 6)
+++			iwinfo_parse_rsn(&e->crypto, ie + 2, ie[1],
+++			                IWINFO_CIPHER_CCMP, IWINFO_KMGMT_8021x);
+++		else if (ie[0] == 221 && ie[1] >= 10 &&
+++		         !memcmp(ie + 2, "\x00\x50\xf2\x01", 4))
+++			iwinfo_parse_rsn(&e->crypto, ie + 6, ie[1] - 4,
+++			                IWINFO_CIPHER_TKIP, IWINFO_KMGMT_PSK);
+++		else if (ie[0] == 61 && ie[1] >= 2)
+++		{
+++			e->ht_chan_info.primary_chan = ie[2];
+++			e->ht_chan_info.secondary_chan_off = ie[3] & 3;
+++			e->ht_chan_info.chan_width = (ie[3] >> 2) & 1;
+++		}
+++		else if (ie[0] == 192 && ie[1] >= 3)
+++		{
+++			e->vht_chan_info.chan_width = ie[2];
+++			e->vht_chan_info.center_chan_1 = ie[3];
+++			e->vht_chan_info.center_chan_2 = ie[4];
+++		}
+++
+++		len -= ie[1] + 2;
+++		ie += ie[1] + 2;
+++	}
+++	return 0;
+++}
+++
+++static int wl_scan_parse(struct wl_scan_results *res, size_t size, char *buf, int *len)
+++{
+++	struct iwinfo_scanlist_entry e;
+++	struct wl_scan_bss *bss;
+++	uint8_t *pos = res->records;
+++	size_t left;
+++	uint32_t i;
+++	int signal;
+++
+++	*len = 0;
+++	if (size < sizeof(*res) || res->buflen < sizeof(*res) || res->buflen > size)
+++		return -1;
+++	if (res->count && res->version != 108 && res->version != 109)
+++		return -1;
+++
+++	left = res->buflen - sizeof(*res);
+++	for (i = 0; i < res->count; i++)
+++	{
+++		if (left < sizeof(*bss))
+++			goto invalid;
+++		bss = (struct wl_scan_bss *)pos;
+++		if ((bss->version != 108 && bss->version != 109) ||
+++		    bss->length < sizeof(*bss) || bss->length > left ||
+++		    bss->ssid_len > IWINFO_ESSID_MAX_SIZE ||
+++		    bss->ie_offset < sizeof(*bss) || bss->ie_offset > bss->length ||
+++		    bss->ie_length > bss->length - bss->ie_offset)
+++			goto invalid;
+++
+++		memset(&e, 0, sizeof(e));
+++		memcpy(e.mac, bss->bssid, sizeof(e.mac));
+++		memcpy(e.ssid, bss->ssid, bss->ssid_len);
+++		e.mode = (bss->capability & 2) ? IWINFO_OPMODE_ADHOC : IWINFO_OPMODE_MASTER;
+++		e.channel = bss->ctl_ch ? bss->ctl_ch : (bss->chanspec & 0xff);
+++		e.band = e.channel > 14 ? IWINFO_BAND_5 : IWINFO_BAND_24;
+++		e.mhz = e.channel == 14 ? 2484 :
+++		        e.channel > 14 ? 5000 + e.channel * 5 : 2407 + e.channel * 5;
+++		signal = bss->rssi;
+++		e.signal = signal;
+++		e.quality = signal < -110 ? 0 : signal > -40 ? 70 : signal + 110;
+++		e.quality_max = 70;
+++		e.crypto.enabled = !!(bss->capability & 0x10);
+++		if (wl_scan_ies(pos + bss->ie_offset, bss->ie_length, &e))
+++			goto invalid;
+++		if (e.crypto.wpa_version)
+++			e.crypto.enabled = 1;
+++		else if (e.crypto.enabled)
+++		{
+++			e.crypto.auth_algs = IWINFO_AUTH_OPEN | IWINFO_AUTH_SHARED;
+++			e.crypto.pair_ciphers = IWINFO_CIPHER_WEP40 | IWINFO_CIPHER_WEP104;
+++			e.crypto.group_ciphers = e.crypto.pair_ciphers;
+++		}
+++		else
+++		{
+++			e.crypto.auth_algs = IWINFO_AUTH_OPEN;
+++			e.crypto.auth_suites = IWINFO_KMGMT_NONE;
+++			e.crypto.pair_ciphers = e.crypto.group_ciphers = IWINFO_CIPHER_NONE;
+++		}
+++
+++		if (*len + sizeof(e) <= IWINFO_BUFSIZE)
+++		{
+++			memcpy(buf + *len, &e, sizeof(e));
+++			*len += sizeof(e);
+++		}
+++		pos += bss->length;
+++		left -= bss->length;
+++	}
+++	return 0;
+++
+++invalid:
+++	*len = 0;
+++	return -1;
+++}
+++
++ static int wl_get_scanlist(const char *ifname, char *buf, int *len)
++ {
++-	return wext_ops.scanlist(ifname, buf, len);
+++	struct wl_scan_params params = {
+++		.bssid = { 255, 255, 255, 255, 255, 255 },
+++		.bss_type = 2,
+++		.nprobes = -1, .active_time = -1, .passive_time = -1, .home_time = -1,
+++	};
+++	struct { int32_t hw, target, scan; } channel;
+++	struct wl_scan_results *res;
+++	int i, ret = -1;
+++
+++	*len = 0;
+++	if (wl_ioctl(ifname, WLC_SCAN, &params, sizeof(params)))
+++		return -1;
+++
+++	/* Do not return old/partial results while an off-channel scan is running. */
+++	for (i = 0; i < 32; i++)
+++	{
+++		usleep(250000);
+++		if (wl_ioctl(ifname, WLC_GET_CHANNEL, &channel, sizeof(channel)))
+++			return -1;
+++		if (!channel.scan)
+++			break;
+++	}
+++	if (i == 32)
+++		return -1;
+++
+++	res = calloc(1, WL_SCAN_BUFSIZE);
+++	if (!res)
+++		return -1;
+++	res->buflen = WL_SCAN_BUFSIZE;
+++	if (!wl_ioctl(ifname, WLC_SCAN_RESULTS, res, WL_SCAN_BUFSIZE))
+++		ret = wl_scan_parse(res, WL_SCAN_BUFSIZE, buf, len);
+++	free(res);
+++	return ret;
++ }
++ 
++ static int wl_get_freqlist(const char *ifname, char *buf, int *len)

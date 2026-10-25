@@ -2,7 +2,7 @@
 # wlblob-check [--config] [--sta SSID KEY]
 #
 # Checks what LuCI's wireless page relies on for the wl radios (netifd driver type "broadcom"):
-#   default   read-only: iwinfo (info, freqlist, txpowerlist, countrylist, assoclist, scan),
+#   default   status queries and active scans: iwinfo (info, freqlist, txpowerlist, countrylist, assoclist, scan),
 #             network.wireless status, luci-rpc, nas/eapd, and that the driver state matches
 #             /etc/config/wireless
 #   --config  also applies the configurations LuCI can write (encryption variants, channel,
@@ -10,7 +10,7 @@
 #             through uci + wifi and verifies each in the driver; the radios go down and up
 #             repeatedly and /etc/config/wireless is restored afterwards
 #   --sta     with --config: also join SSID/KEY as a client on the 5 GHz radio
-# Exit status: number of failed checks (0 = all good).  WARN lines are known gaps, not failures.
+# Exit status: number of failed checks (0 = all good).  WARN lines are limitations or empty results, not failures.
 . /lib/functions.sh
 
 fails=0; passes=0; warns=0
@@ -35,7 +35,7 @@ config_foreach _collect wifi-device
 [ -n "$radios" ] || { fail "no wifi-device of type broadcom in /etc/config/wireless"; exit 1; }
 
 check_iwinfo() {
-	local dev="$1" info fl ch mhz exp htm n m
+	local dev="$1" info fl ch mhz exp htm n m scan
 	info=$(iw info "$dev")
 	[ -n "$info" ] || { fail "$dev: iwinfo info failed"; return; }
 	fl=$(iw freqlist "$dev")
@@ -64,8 +64,12 @@ check_iwinfo() {
 	n=$(jf "$(iw countrylist "$dev")" '@.results[*]' | wc -l)
 	[ "$n" -gt 0 ] && ok "$dev: countrylist ($n entries)" || warn "$dev: countrylist empty (the core answers 'buffer too short' on this radio; LuCI shows no country field for this type)"
 	iw assoclist "$dev" | grep -q '"results"' && ok "$dev: assoclist" || fail "$dev: assoclist failed"
-	n=$(jf "$(iw scan "$dev")" '@.results[*].ssid' | wc -l)
-	[ "$n" -gt 0 ] && ok "$dev: scan sees $n networks" || warn "$dev: scan returns nothing (LuCI 'Join Network' unusable; known gap)"
+	if scan=$(iw scan "$dev"); then
+		n=$(jf "$scan" '@.results[*].bssid' | wc -l)
+		[ "$n" -gt 0 ] && ok "$dev: scan sees $n networks" || warn "$dev: scan returned no networks"
+	else
+		fail "$dev: iwinfo scan request failed"
+	fi
 }
 
 # driver state vs. the configuration netifd applied

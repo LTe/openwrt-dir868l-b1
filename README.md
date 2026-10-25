@@ -167,15 +167,17 @@ Driver measurements and experimental work are documented in [Performance and dri
 ## Checking that LuCI and netifd get what they need
 
 LuCI's wireless page has no logic of its own: it shows what `iwinfo` reports (channels, modes,
-signal, stations) and writes `/etc/config/wireless` for netifd.  `wlblob-check` (in
+signal, stations, nearby networks) and writes `/etc/config/wireless` for netifd.  `wlblob-check` (in
 `wlblob-utils`) verifies that chain on the router:
 
-    wlblob-check            # read-only: iwinfo answers, netifd status, driver state vs. config
+    wlblob-check            # status checks and active scans; configuration stays unchanged
     wlblob-check --config   # also applies every configuration LuCI can write (encryption
                             # variants, channel, htmode, hidden, missing band, WEP/ad-hoc which
                             # must be refused), radios restart repeatedly, config restored after
 
-Lines start with PASS, FAIL or WARN (known gaps); the exit status is the number of failures.
+Lines start with PASS, FAIL or WARN; the exit status is the number of failures.
+LuCI **Scan** lists nearby networks on both bands, including their signal and security.
+Implementation and validation: [LuCI scanning](docs/LUCI-SCAN.md).
 
 ## Driver core variants
 
