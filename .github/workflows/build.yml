@@ -118,7 +118,7 @@ jobs:
         run: |
           df -h / | tail -n 1
           du -sh openwrt/build_dir openwrt/staging_dir openwrt/dl openwrt/tmp toolchain 2>/dev/null || true
-          sudo chown -R "$(id -u):$(id -g)" .git out 2>/dev/null || true
+          sudo chown "$(id -u):$(id -g)" . && sudo chown -R "$(id -u):$(id -g)" .git out
 
       - name: Upload firmware
         uses: actions/upload-artifact@v4
