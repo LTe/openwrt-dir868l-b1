@@ -9,7 +9,25 @@ Nothing proprietary is stored in this repository.  At build time the driver core
 wl 6.37.14.126) and the `wl` control tool are downloaded from the public FreshTomato ARM source
 tree at a pinned commit and verified by sha256.
 
+![OpenWrt LuCI status overview on the D-Link DIR-868L B1](docs/images/luci-overview.png)
+
 ![OpenWrt LuCI wireless panel on the D-Link DIR-868L B1](docs/images/luci-wireless.png)
+
+## Performance
+
+Measured on OpenWrt r37659 / Linux 6.18.55 with a GL-MT6000 client about two metres away.
+TCP `iperf3`, 15 seconds per test, one band active at a time; the server runs on the DIR-868L.
+
+| Band | Mode | TCP streams | Client → router | Router → client |
+|---|---|---:|---:|---:|
+| 5 GHz | VHT80, channel 36 | 1 | 284 Mbit/s | 216 Mbit/s |
+| 5 GHz | VHT80, channel 36 | 4 | 308 Mbit/s | 229 Mbit/s |
+| 2.4 GHz | HT20, channel 1 | 1 | 54 Mbit/s | 103 Mbit/s |
+| 2.4 GHz | HT20, channel 1 | 4 | 51 Mbit/s | 112 Mbit/s |
+
+These are direct Wi-Fi endpoint measurements, not bridge or NAT throughput. Results depend
+on the client and radio conditions. Test details and separate experimental results are in
+[Performance and driver research](docs/PERFORMANCE.md).
 
 ## Download and install
 

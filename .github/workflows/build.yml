@@ -149,6 +149,9 @@ jobs:
             kind="Built from the pinned OpenWrt snapshot $ver."
           fi
           { echo "$kind  Upstream commit: https://github.com/openwrt/openwrt/commit/${{ steps.ver.outputs.sha }}"
+            if [ -f "docs/releases/$tag.md" ]; then
+              echo; cat "docs/releases/$tag.md"
+            fi
             echo; cat .github/release-notes.md
             echo; echo '```'; grep -E '\.(bin|manifest)$' out/sha256sums; echo '```'; } > notes.md
           { echo "tag=$tag"; echo "title=$title"; echo "sha=$(git rev-parse HEAD)"; } | tee -a "$GITHUB_OUTPUT"
