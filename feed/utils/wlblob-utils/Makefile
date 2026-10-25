@@ -6,7 +6,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=wlblob-utils
-PKG_RELEASE:=2
+PKG_RELEASE:=3
 PKG_LICENSE:=GPL-2.0-only
 
 include $(INCLUDE_DIR)/package.mk
@@ -20,7 +20,7 @@ define Package/wlblob-utils
 endef
 
 define Package/wlblob-utils/description
-  Makes the wl radios ordinary /etc/config/wireless devices (type wlblob): AP with one or more
+  Makes the wl radios ordinary /etc/config/wireless devices (type broadcom): AP with one or more
   SSIDs, station mode, none/psk/psk2 via nas/eapd, LuCI status through the iwinfo wl backend.
 endef
 
@@ -35,8 +35,10 @@ define Package/wlblob-utils/install
 	$(INSTALL_BIN) ./files/etc/init.d/wlblob $(1)/etc/init.d/
 	$(LN) /tmp/wl-nvram.txt $(1)/lib/firmware/brcm/wl-nvram.txt
 	$(INSTALL_DIR) $(1)/lib/netifd/wireless $(1)/lib/wifi
-	$(INSTALL_BIN) ./files/lib/netifd/wireless/wlblob.sh $(1)/lib/netifd/wireless/
-	$(INSTALL_DATA) ./files/lib/wifi/wlblob.sh $(1)/lib/wifi/
+	$(INSTALL_BIN) ./files/lib/netifd/wireless/broadcom.sh $(1)/lib/netifd/wireless/
+	$(INSTALL_DATA) ./files/lib/wifi/broadcom.sh $(1)/lib/wifi/
+	$(INSTALL_DIR) $(1)/etc/uci-defaults
+	$(INSTALL_BIN) ./files/etc/uci-defaults/60-wlblob-type-broadcom $(1)/etc/uci-defaults/
 endef
 
 $(eval $(call BuildPackage,wlblob-utils))

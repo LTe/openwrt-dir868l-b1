@@ -90,13 +90,13 @@ toolchain instead of building one.
 
 ## Using the WiFi
 
-The radios appear as ordinary `/etc/config/wireless` devices of type `wlblob` (`wl0` = 2.4 GHz,
+The radios appear as ordinary `/etc/config/wireless` devices of type `broadcom` (`wl0` = 2.4 GHz,
 `wl1` = 5 GHz), created by `wifi config`.  Supported: `mode ap` (several per radio), `mode sta`,
 `encryption none|psk|psk2|psk-mixed`, `channel`, `htmode` (HT20/40, VHT20/40/80), `hidden`,
 `isolate`, `maxassoc`, `txpower`, `country`.  Not supported: WPA3, 802.11r, mesh, monitor.
 
 Under the hood: `kmod-brcm-wl-blob` exposes `wlN` netdevs and an emulated `/dev/nvram`;
-`/lib/netifd/wireless/wlblob.sh` configures the radio through `wl` and writes the `wlN_*` nvram
+`/lib/netifd/wireless/broadcom.sh` configures the radio through `wl` and writes the `wlN_*` nvram
 variables; `eapd` and `nas` (authenticator for APs, supplicant for stations) do WPA.  Radio
 calibration data comes from the stock firmware's NVRAM defaults (`/usr/share/wlblob/wl-nvram.tmpl`)
 plus the MAC addresses from the `devdata` partition.

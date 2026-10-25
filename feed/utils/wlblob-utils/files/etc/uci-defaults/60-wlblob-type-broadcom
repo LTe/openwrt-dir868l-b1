@@ -1,0 +1,14 @@
+#!/bin/sh
+# the driver type was renamed from wlblob to broadcom (LuCI offers WPA only for known types)
+changed=0
+for dev in $(uci -q show wireless | sed -n "s/^wireless\.\([^.]*\)\.type='wlblob'$/\1/p"); do
+	uci set wireless.$dev.type=broadcom
+	changed=1
+done
+if [ "$changed" = 1 ]; then
+	uci commit wireless
+	# netifd only reads the driver scripts at start: when upgrading on a running system it
+	# still knows the old name and would drop the radios from its config
+	ubus -t 2 list network >/dev/null 2>&1 && /etc/init.d/network restart
+fi
+exit 0

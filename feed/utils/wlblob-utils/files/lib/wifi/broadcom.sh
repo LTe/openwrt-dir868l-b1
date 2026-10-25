@@ -1,8 +1,8 @@
 #!/bin/sh
-# `wifi config` detection for wlblob radios (wlN netdevs of the re-linked Broadcom core)
-append DRIVERS "wlblob"
+# `wifi config` detection for the re-linked Broadcom wl core (wlN netdevs), driver type "broadcom"
+append DRIVERS "broadcom"
 
-detect_wlblob() {
+detect_broadcom() {
 	local dev i band channel htmode devid
 	[ -d /sys/module/wl ] || [ -x /etc/init.d/wlblob ] && /etc/init.d/wlblob start >/dev/null 2>&1
 	for dev in /sys/class/net/wl[0-9]; do
@@ -16,7 +16,7 @@ detect_wlblob() {
 		esac
 		uci -q batch <<-EOT
 			set wireless.wlblob$i=wifi-device
-			set wireless.wlblob$i.type=wlblob
+			set wireless.wlblob$i.type=broadcom
 			set wireless.wlblob$i.ifname=wl$i
 			set wireless.wlblob$i.band=$band
 			set wireless.wlblob$i.channel=$channel

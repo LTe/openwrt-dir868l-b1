@@ -1,5 +1,7 @@
 #!/bin/sh
 # netifd wireless driver for the re-linked Broadcom wl core (kmod-brcm-wl-blob).
+# The driver type is "broadcom" (the name LuCI knows for Broadcom wl radios: it offers the
+# WPA-PSK choices only for the mac80211 and broadcom types).
 # Radios are wlN netdevs created by the wl module; WPA is done by nas (authenticator for AP,
 # supplicant for STA) and eapd, which read their configuration through /dev/nvram (emulated by
 # the module).  Modes: one STA per radio, or one or more APs (MBSS).
@@ -8,16 +10,16 @@
 
 init_wireless_driver "$@"
 
-drv_wlblob_init_device_config() {
+drv_broadcom_init_device_config() {
 	config_add_string ifname country macaddr
 	config_add_int txpower frameburst distance
 }
 
-drv_wlblob_cleanup() { :; }
-drv_wlblob_init_vlan_config() { :; }
-drv_wlblob_init_station_config() { :; }
+drv_broadcom_cleanup() { :; }
+drv_broadcom_init_vlan_config() { :; }
+drv_broadcom_init_station_config() { :; }
 
-drv_wlblob_init_iface_config() {
+drv_broadcom_init_iface_config() {
 	config_add_string macaddr
 	config_add_boolean isolate hidden
 	config_add_int maxassoc wpa_group_rekey
@@ -105,6 +107,7 @@ wlblob_setup_ap() {
 	json_select config
 	json_get_vars mode ssid key isolate:0 hidden:0 maxassoc wpa_group_rekey:3600 macaddr
 	wireless_vif_parse_encryption
+	[ "$encryption" = "psk+psk2" ] && wpa=3	# LuCI spells psk-mixed this way for type broadcom
 	json_select ..
 
 	# first AP lives on the radio interface itself, the others on wlN.k (MBSS)
@@ -125,7 +128,7 @@ wlblob_setup_ap() {
 	set -- $(wlblob_security)
 	local wsec="$1" wpa_auth="$2" akm="$3" crypto="$4"
 	[ "$auth_type" = "psk" -a -z "$key" ] && { wireless_setup_vif_failed NO_KEY; return 1; }
-	[ "$wpa" -gt 0 -a "$auth_type" != "psk" ] && { wireless_setup_vif_failed "unsupported encryption $encryption (only none/psk/psk2/psk-mixed)"; return 1; }
+	[ "$wpa" -gt 0 -a "$auth_type" != "psk" ] && { wireless_setup_vif_failed "unsupported encryption $encryption (only none/psk/psk2/psk-mixed/psk+psk2)"; return 1; }
 
 	[ "$bss" = 0 ] && wlblob_wl ap 1
 	wl -i "$vif" ssid "$ssid" >/dev/null 2>&1
@@ -157,6 +160,7 @@ wlblob_setup_sta() {
 	json_select config
 	json_get_vars mode ssid key bssid
 	wireless_vif_parse_encryption
+	[ "$encryption" = "psk+psk2" ] && wpa=3	# LuCI spells psk-mixed this way for type broadcom
 	json_select ..
 
 	[ -n "$ssid" ] || { wireless_setup_vif_failed NO_SSID; return 1; }
@@ -188,7 +192,7 @@ wlblob_setup_sta() {
 	wlblob_log "$ifn: STA '$ssid' ${akm:-open}${crypto:+/$crypto}"
 }
 
-drv_wlblob_setup() {
+drv_broadcom_setup() {
 	json_select config
 	json_get_vars ifname channel band htmode country txpower frameburst:1 distance macaddr
 	_wdev_prepare_channel
@@ -235,7 +239,7 @@ drv_wlblob_setup() {
 	wireless_set_up
 }
 
-drv_wlblob_teardown() {
+drv_broadcom_teardown() {
 	json_select data
 	json_get_vars wlif
 	json_select ..
@@ -256,4 +260,4 @@ drv_wlblob_teardown() {
 	wlnvram set "${wlif}_vifs="
 }
 
-add_driver wlblob
+add_driver broadcom
