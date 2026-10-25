@@ -15,7 +15,7 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=brcm-wl-blob
-PKG_RELEASE:=2
+PKG_RELEASE:=3
 PKG_LICENSE:=Proprietary
 PKG_BUILD_DIR:=$(KERNEL_BUILD_DIR)/$(PKG_NAME)
 

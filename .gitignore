@@ -1,3 +1,4 @@
 /out/
 /toolchain/
 /openwrt/.config*
+/.toolchain-dir

@@ -1,20 +1,23 @@
-bcm53xx: add support for D-Link DIR-868L B1
-
-Device support as submitted upstream in openwrt/openwrt#20684; dropped once merged.
-
----
- package/boot/uboot-bcm53xx/Makefile           |   7 +-
- .../base-files/etc/uci-defaults/09_fix_crc    |   1 +
- .../base-files/lib/upgrade/platform.sh        |   1 +
- target/linux/bcm53xx/image/Makefile           |  13 +
- ...M5301X-Add-DT-for-D-Link-DIR-868L-B1.patch | 225 ++++++++++++++++++
- 5 files changed, 246 insertions(+), 1 deletion(-)
- create mode 100644 target/linux/bcm53xx/patches-6.12/351-ARM-dts-BCM5301X-Add-DT-for-D-Link-DIR-868L-B1.patch
+ package/boot/uboot-bcm53xx/Makefile                |   9 +-
+ .../bcm53xx/base-files/etc/uci-defaults/09_fix_crc |   1 +
+ .../bcm53xx/base-files/lib/upgrade/platform.sh     |   1 +
+ target/linux/bcm53xx/image/Makefile                |  13 ++
+ ...ts-BCM5301X-Add-DT-for-D-Link-DIR-868L-B1.patch | 231 +++++++++++++++++++++
+ 5 files changed, 253 insertions(+), 2 deletions(-)
 
 diff --git a/package/boot/uboot-bcm53xx/Makefile b/package/boot/uboot-bcm53xx/Makefile
-index 73af7cb640..1981e7796e 100644
+index 73af7cb640..ddefeb0330 100644
 --- a/package/boot/uboot-bcm53xx/Makefile
 +++ b/package/boot/uboot-bcm53xx/Makefile
+@@ -2,7 +2,7 @@ include $(TOPDIR)/rules.mk
+ 
+ PKG_VERSION:=2025.10
+ PKG_HASH:=b4f032848e56cc8f213ad59f9132c084dbbb632bc29176d024e58220e0efdf4a
+-PKG_RELEASE:=1
++PKG_RELEASE:=2
+ 
+ include $(INCLUDE_DIR)/u-boot.mk
+ include $(INCLUDE_DIR)/package.mk
 @@ -19,12 +19,17 @@ define U-Boot/dir-885l
    BUILD_DEVICES:=dlink_dir-885l
  endef
@@ -47,7 +50,7 @@ index c39625b865..7f10235df1 100644
  dlink,dir-890l)
  	fixseama
 diff --git a/target/linux/bcm53xx/base-files/lib/upgrade/platform.sh b/target/linux/bcm53xx/base-files/lib/upgrade/platform.sh
-index dfa333af8b..1523bd09ec 100644
+index 0e6f80ff0c..1abddad2de 100644
 --- a/target/linux/bcm53xx/base-files/lib/upgrade/platform.sh
 +++ b/target/linux/bcm53xx/base-files/lib/upgrade/platform.sh
 @@ -37,6 +37,7 @@ platform_expected_image() {
@@ -59,10 +62,10 @@ index dfa333af8b..1523bd09ec 100644
  		"dlink,dir-890l")	echo "seamaseal wrgac36_dlink.2013gui_dir890"; return;;
  		"luxul,abr-4500-v1")	echo "lxl ABR-4500"; return;;
 diff --git a/target/linux/bcm53xx/image/Makefile b/target/linux/bcm53xx/image/Makefile
-index 9bfab59dcc..eb4fc175eb 100644
+index a4595958fe..84afa58ce4 100644
 --- a/target/linux/bcm53xx/image/Makefile
 +++ b/target/linux/bcm53xx/image/Makefile
-@@ -291,6 +291,19 @@ define Device/dlink
+@@ -292,6 +292,19 @@ define Device/dlink
    IMAGE/bin := append-ubi | seama-nand
  endef
  
@@ -82,13 +85,15 @@ index 9bfab59dcc..eb4fc175eb 100644
  define Device/dlink_dir-885l
    DEVICE_MODEL := DIR-885L
    DEVICE_PACKAGES := $(BRCMFMAC_4366B1) $(USB3_PACKAGES)
-diff --git a/target/linux/bcm53xx/patches-6.12/351-ARM-dts-BCM5301X-Add-DT-for-D-Link-DIR-868L-B1.patch b/target/linux/bcm53xx/patches-6.12/351-ARM-dts-BCM5301X-Add-DT-for-D-Link-DIR-868L-B1.patch
+diff --git a/target/linux/bcm53xx/patches-6.18/353-ARM-dts-BCM5301X-Add-DT-for-D-Link-DIR-868L-B1.patch b/target/linux/bcm53xx/patches-6.18/353-ARM-dts-BCM5301X-Add-DT-for-D-Link-DIR-868L-B1.patch
 new file mode 100644
-index 0000000000..733cf35ee6
+index 0000000000..6d520c7f47
 --- /dev/null
-+++ b/target/linux/bcm53xx/patches-6.12/351-ARM-dts-BCM5301X-Add-DT-for-D-Link-DIR-868L-B1.patch
-@@ -0,0 +1,225 @@
++++ b/target/linux/bcm53xx/patches-6.18/353-ARM-dts-BCM5301X-Add-DT-for-D-Link-DIR-868L-B1.patch
+@@ -0,0 +1,231 @@
++From c942d40f8052c653033a00ea2fa0fb6de912d85e Mon Sep 17 00:00:00 2001
 +From: Piotr Nielacny <piotr.nielacny@gmail.com>
++Date: Sun, 25 Oct 2026 07:22:53 +0000
 +Subject: [PATCH] ARM: dts: BCM5301X: Add DT for D-Link DIR-868L B1
 +
 +Add device tree for D-Link DIR-868L B1 wireless router based on
@@ -105,10 +110,14 @@ index 0000000000..733cf35ee6
 +
 +Signed-off-by: Piotr Nielacny <piotr.nielacny@gmail.com>
 +---
++ arch/arm/boot/dts/broadcom/Makefile           |   1 +
++ .../broadcom/bcm47081-dlink-dir-868l-b1.dts   | 194 ++++++++++++++++++
++ 2 files changed, 195 insertions(+)
++ create mode 100644 arch/arm/boot/dts/broadcom/bcm47081-dlink-dir-868l-b1.dts
 +
 +--- a/arch/arm/boot/dts/broadcom/Makefile
 ++++ b/arch/arm/boot/dts/broadcom/Makefile
-+@@ -61,6 +61,7 @@ dtb-$(CONFIG_ARCH_BCM_5301X) += \
++@@ -66,6 +66,7 @@ dtb-$(CONFIG_ARCH_BCM_5301X) += \
 + 	bcm47081-asus-rt-n18u.dtb \
 + 	bcm47081-buffalo-wzr-600dhp2.dtb \
 + 	bcm47081-buffalo-wzr-900dhp.dtb \
@@ -313,6 +322,3 @@ index 0000000000..733cf35ee6
 ++		};
 ++	};
 ++};
--- 
-2.43.0
-

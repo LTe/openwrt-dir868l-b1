@@ -123,6 +123,37 @@ for i, s in enumerate(syms):
             report["renamed"].append(f'{s["sname"]}->{RENAME[s["sname"]]}')
 # also demote glue-owned data objects? (left in place: harmless dead data)
 
+# .ARM.attributes: the vendor object says Tag_ABI_PCS_wchar_t = 4, kernel objects are built with
+# -fshort-wchar (= 2).  ld warns about the mismatch and kernels >= 6.15 link with --fatal-warnings
+# (CONFIG_WERROR).  The core never uses wchar_t values, so declare 2 to match the rest of wl.ko.
+def fix_wchar_attr():
+    if ".ARM.attributes" not in idx:
+        return
+    sec = secs[idx[".ARM.attributes"]]; base, end = sec["offset"], sec["offset"] + sec["size"]
+    assert data[base] == ord("A")
+    pos = base + 1
+    while pos < end:
+        (sub_len,) = struct.unpack_from("<I", data, pos)
+        vendor = cstr(pos + 4); p = pos + 4 + len(vendor) + 1; sub_end = pos + sub_len
+        if vendor == "aeabi":
+            while p < sub_end:
+                tag = data[p]; (size,) = struct.unpack_from("<I", data, p + 1); q = p + 5; t_end = p + size
+                if tag == 1:   # Tag_File: attribute pairs until the end of this sub-subsection
+                    while q < t_end:
+                        t = data[q]; q += 1
+                        if t in (4, 5, 67):                 # NTBS values
+                            q = data.index(b"\0", q) + 1
+                        elif t == 32 or t == 65:           # Tag_compatibility / Tag_also_compatible_with: uleb + NTBS
+                            q = data.index(b"\0", q + 1) + 1
+                        else:                              # uleb128 int (all values here fit one byte)
+                            assert data[q] < 0x80, "multi-byte uleb128 attribute value"
+                            if t == 18 and data[q] == 4:
+                                data[q] = 2; report["wchar_t"] = ["4->2"]
+                            q += 1
+                p = t_end
+        pos = sub_end
+fix_wchar_attr()
+
 # append strtab extension: strtab is usually last-but-one; we must grow it in place -> rebuild file
 if strtab_extra:
     # rebuild: shift everything after strtab end by len(strtab_extra) (sections are in file order)

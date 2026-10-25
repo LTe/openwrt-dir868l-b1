@@ -616,7 +616,11 @@ void wl_sendup(wl_info_t *wl, wl_if_t *wlif, void *p, int numpkt)
 /* ------------------------------------------------------------------ timers */
 static void wl_timer_fn(struct timer_list *tl)
 {
+#ifdef timer_container_of	/* 6.16+; from_timer() is gone in 6.17 */
+	wl_timer_t *t = timer_container_of(t, tl, timer);
+#else
 	wl_timer_t *t = from_timer(t, tl, timer);
+#endif
 	wl_info_t *wl = t->wl;
 
 	WL_LOCK(wl);
@@ -905,7 +909,11 @@ static int __init wl_module_init(void)
 {
 	wlblob_compat_init();
 	wlblob_nvram_dev_init();
+#ifdef WLSKB_LAYOUT_FT
+	printk(KERN_INFO "wl: Broadcom wl core 6.37.14.126 (FreshTomato wl_apsta.o) re-linked for kernel " UTS_RELEASE "\n");
+#else
 	printk(KERN_INFO "wl: Broadcom wl core 6.37.14.56 (r428735) re-linked for kernel " UTS_RELEASE "\n");
+#endif
 	return pci_register_driver(&wl_pci_driver);
 }
 

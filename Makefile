@@ -7,7 +7,10 @@
 #
 # Variables: NPROC (default: all cores), V=s (verbose OpenWrt build), TOOLCHAIN_DIR (use an
 # external OpenWrt toolchain, see scripts/get-toolchain.sh; CI does this to skip building gcc).
+# TOOLCHAIN_DIR is remembered in .toolchain-dir, so a later plain `make image` keeps using it;
+# `make prepare TOOLCHAIN_DIR=` (empty) goes back to building the toolchain.
 OPENWRT := $(CURDIR)/openwrt
+TOOLCHAIN_DIR ?= $(shell cat .toolchain-dir 2>/dev/null)
 FEED    := wlblob
 TARGET  := bcm53xx/generic
 NPROC   ?= $(shell nproc)
@@ -34,8 +37,11 @@ feeds: patches
 config: feeds
 	cp config.seed $(OPENWRT)/.config
 ifneq ($(TOOLCHAIN_DIR),)
+	echo "$(TOOLCHAIN_DIR)" > .toolchain-dir
 	echo CONFIG_DEVEL=y >> $(OPENWRT)/.config
 	cd $(OPENWRT) && ./scripts/ext-toolchain.sh --toolchain $(abspath $(TOOLCHAIN_DIR))/toolchain-* --overwrite-config --config $(TARGET)
+else
+	rm -f .toolchain-dir
 endif
 	$(MAKE) -C $(OPENWRT) defconfig
 
@@ -57,5 +63,5 @@ clean:
 	-$(MAKE) -C $(OPENWRT) clean
 
 distclean:
-	rm -rf out toolchain
+	rm -rf out toolchain .toolchain-dir
 	-$(MAKE) -C $(OPENWRT) distclean
