@@ -101,6 +101,19 @@ variables; `eapd` and `nas` (authenticator for APs, supplicant for stations) do 
 calibration data comes from the stock firmware's NVRAM defaults (`/usr/share/wlblob/wl-nvram.tmpl`)
 plus the MAC addresses from the `devdata` partition.
 
+## Checking that LuCI and netifd get what they need
+
+LuCI's wireless page has no logic of its own: it shows what `iwinfo` reports (channels, modes,
+signal, stations) and writes `/etc/config/wireless` for netifd.  `wlblob-check` (in
+`wlblob-utils`) verifies that chain on the router:
+
+    wlblob-check            # read-only: iwinfo answers, netifd status, driver state vs. config
+    wlblob-check --config   # also applies every configuration LuCI can write (encryption
+                            # variants, channel, htmode, hidden, missing band, WEP/ad-hoc which
+                            # must be refused), radios restart repeatedly, config restored after
+
+Lines start with PASS, FAIL or WARN (known gaps); the exit status is the number of failures.
+
 ## Driver core variants
 
 `kmod-brcm-wl-blob` defaults to the FreshTomato core.  The D-Link stock core (wl 6.37.14.56, AP

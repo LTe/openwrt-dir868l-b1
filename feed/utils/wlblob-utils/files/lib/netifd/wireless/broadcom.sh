@@ -226,6 +226,9 @@ drv_broadcom_setup() {
 	wlblob_wl down
 	[ -n "$macaddr" ] && wlblob_wl cur_etheraddr "$macaddr"
 	[ -n "$country" ] && wlblob_wl country "$country"
+	# the core allows 20 MHz only on 2.4 GHz by default; 40 MHz chanspecs are "Bad Channel" until
+	# the bandwidth capability includes it
+	[ "$band" = 2g ] && wlblob_wl bw_cap 2g $([ "$htmode" = HT40 ] && echo 3 || echo 1)
 	wlblob_wl chanspec "$(wlblob_chanspec "$channel" "$htmode" "$band")"
 	wlblob_wl frameburst "$frameburst"
 	[ -n "$txpower" ] && wlblob_wl txpwr1 -d "$txpower"

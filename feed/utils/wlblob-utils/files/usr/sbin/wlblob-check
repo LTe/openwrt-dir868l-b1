@@ -1,0 +1,234 @@
+#!/bin/sh
+# wlblob-check [--config] [--sta SSID KEY]
+#
+# Checks what LuCI's wireless page relies on for the wl radios (netifd driver type "broadcom"):
+#   default   read-only: iwinfo (info, freqlist, txpowerlist, countrylist, assoclist, scan),
+#             network.wireless status, luci-rpc, nas/eapd, and that the driver state matches
+#             /etc/config/wireless
+#   --config  also applies the configurations LuCI can write (encryption variants, channel,
+#             htmode, hidden, missing band/channel/htmode, WEP and ad-hoc which must be refused)
+#             through uci + wifi and verifies each in the driver; the radios go down and up
+#             repeatedly and /etc/config/wireless is restored afterwards
+#   --sta     with --config: also join SSID/KEY as a client on the 5 GHz radio
+# Exit status: number of failed checks (0 = all good).  WARN lines are known gaps, not failures.
+. /lib/functions.sh
+
+fails=0; passes=0; warns=0
+ok()   { passes=$((passes + 1)); echo "PASS $*"; }
+fail() { fails=$((fails + 1)); echo "FAIL $*"; }
+warn() { warns=$((warns + 1)); echo "WARN $*"; }
+jf()   { jsonfilter -s "$1" -e "$2" 2>/dev/null; }
+iw()   { ubus -t 15 call iwinfo "$1" "{\"device\":\"$2\"}" 2>/dev/null; }
+wpa_auth() { local v; v=$(wl -i "$1" wpa_auth 2>/dev/null | awk '{print $1}'); echo $((v)); }	# 0x80 -> 128
+
+# ---------------------------------------------------------------- read-only checks
+radios=""
+_collect() {
+	local type ifname disabled
+	config_get type "$1" type
+	config_get ifname "$1" ifname
+	config_get disabled "$1" disabled 0
+	[ "$type" = broadcom ] && radios="$radios $1:$ifname:$disabled"
+}
+config_load wireless
+config_foreach _collect wifi-device
+[ -n "$radios" ] || { fail "no wifi-device of type broadcom in /etc/config/wireless"; exit 1; }
+
+check_iwinfo() {
+	local dev="$1" info fl ch mhz exp htm n m
+	info=$(iw info "$dev")
+	[ -n "$info" ] || { fail "$dev: iwinfo info failed"; return; }
+	fl=$(iw freqlist "$dev")
+	n=$(jf "$fl" '@.results[*].channel' | wc -l)
+	if [ "$n" -gt 0 ]; then
+		ok "$dev: freqlist has $n channels"
+	else
+		fail "$dev: freqlist is empty (LuCI then clears band/channel/htmode on save)"
+	fi
+	ch=$(jf "$info" '@.channel'); mhz=$(jf "$info" '@.frequency'); htm=$(jf "$info" '@.htmode')
+	if [ -n "$ch" ] && jf "$fl" '@.results[*].channel' | grep -qx "$ch"; then
+		ok "$dev: channel $ch is in freqlist"
+	else
+		fail "$dev: channel '$ch' is not in freqlist"
+	fi
+	exp=$(jf "$fl" "@.results[@.channel=$ch].mhz")
+	[ -n "$mhz" ] && [ "$mhz" = "$exp" ] && ok "$dev: frequency $mhz MHz matches channel $ch" || fail "$dev: frequency '$mhz', expected '$exp'"
+	if jf "$info" '@.htmodes[*]' | grep -qx "$htm"; then
+		ok "$dev: htmode $htm is offered in htmodes"
+	else
+		fail "$dev: htmode '$htm' not in htmodes [$(jf "$info" '@.htmodes[*]' | tr '\n' ' ')]"
+	fi
+	[ -n "$(jf "$info" '@.hwmodes[0]')" ] && ok "$dev: hwmodes $(jf "$info" '@.hwmodes_text')" || fail "$dev: hwmodes empty"
+	n=$(jf "$(iw txpowerlist "$dev")" '@.results[*]' | wc -l)
+	[ "$n" -gt 0 ] && ok "$dev: txpowerlist ($n entries)" || fail "$dev: txpowerlist empty"
+	n=$(jf "$(iw countrylist "$dev")" '@.results[*]' | wc -l)
+	[ "$n" -gt 0 ] && ok "$dev: countrylist ($n entries)" || warn "$dev: countrylist empty (the core answers 'buffer too short' on this radio; LuCI shows no country field for this type)"
+	iw assoclist "$dev" | grep -q '"results"' && ok "$dev: assoclist" || fail "$dev: assoclist failed"
+	n=$(jf "$(iw scan "$dev")" '@.results[*].ssid' | wc -l)
+	[ "$n" -gt 0 ] && ok "$dev: scan sees $n networks" || warn "$dev: scan returns nothing (LuCI 'Join Network' unusable; known gap)"
+}
+
+# driver state vs. the configuration netifd applied
+check_state() {
+	local sec="$1" dev="$2" st up pending ifn i n ssid enc mode wsec auth cfg_ssid
+	st=$(ubus -t 15 call network.wireless status)
+	up=$(jf "$st" "@.$sec.up"); pending=$(jf "$st" "@.$sec.pending")
+	[ "$up" = true ] && [ "$pending" = false ] && ok "$sec: netifd reports up" || { fail "$sec: netifd up=$up pending=$pending"; return; }
+	[ "$(wl -i "$dev" isup 2>/dev/null)" = 1 ] && ok "$dev: radio is up" || fail "$dev: wl isup != 1"
+	n=$(jf "$st" "@.$sec.interfaces[*].section" | wc -l)
+	[ "$n" -gt 0 ] || { fail "$sec: no interface came up"; return; }
+	i=0
+	while [ $i -lt $n ]; do
+		ifn=$(jf "$st" "@.$sec.interfaces[$i].ifname")
+		mode=$(jf "$st" "@.$sec.interfaces[$i].config.mode")
+		cfg_ssid=$(jf "$st" "@.$sec.interfaces[$i].config.ssid")
+		enc=$(jf "$st" "@.$sec.interfaces[$i].config.encryption")
+		i=$((i + 1))
+		[ -n "$ifn" ] && [ -d "/sys/class/net/$ifn" ] && ok "$sec: $mode interface $ifn exists" || { fail "$sec: $mode interface '$ifn' missing"; continue; }
+		ssid=$(wl -i "$ifn" ssid 2>/dev/null | sed -n 's/^Current SSID: "\(.*\)"$/\1/p')
+		[ "$ssid" = "$cfg_ssid" ] && ok "$ifn: ssid '$ssid'" || fail "$ifn: ssid '$ssid', config says '$cfg_ssid'"
+		wsec=$(wl -i "$ifn" wsec 2>/dev/null); auth=$(wpa_auth "$ifn")
+		case "$enc" in
+			none|"") [ "$wsec" = 0 ] && [ "$auth" = 0 ] && ok "$ifn: open" || fail "$ifn: config open but wsec=$wsec wpa_auth=$auth";;
+			psk2*)   [ "$auth" = 128 ] && [ "$wsec" != 0 ] && ok "$ifn: WPA2-PSK (wsec $wsec)" || fail "$ifn: $enc but wpa_auth=$auth wsec=$wsec";;
+			psk-mixed*|psk+psk2*) [ "$auth" = 132 ] && ok "$ifn: WPA/WPA2-PSK" || fail "$ifn: $enc but wpa_auth=$auth";;
+			psk*)    [ "$auth" = 4 ] && ok "$ifn: WPA-PSK" || fail "$ifn: $enc but wpa_auth=$auth";;
+			*)       warn "$ifn: encryption '$enc' not checked";;
+		esac
+		case "$enc" in
+			psk*) pgrep nas >/dev/null && pgrep eapd >/dev/null && ok "$ifn: nas and eapd running" || fail "$ifn: nas/eapd not running";;
+		esac
+	done
+}
+
+echo "== read-only checks"
+for r in $radios; do
+	sec=${r%%:*}; rest=${r#*:}; dev=${rest%%:*}; dis=${rest#*:}
+	[ -d "/sys/class/net/$dev" ] && ok "$sec: netdev $dev present" || { fail "$sec: netdev '$dev' missing (module loaded?)"; continue; }
+	check_iwinfo "$dev"
+	[ "$dis" = 1 ] && { warn "$sec: disabled in config, state not checked"; continue; }
+	check_state "$sec" "$dev"
+done
+lr=$(ubus -t 15 call luci-rpc getWirelessDevices 2>/dev/null)
+for r in $radios; do
+	sec=${r%%:*}
+	echo "$lr" | grep -q "\"$sec\"" && ok "luci-rpc getWirelessDevices lists $sec" || fail "luci-rpc getWirelessDevices does not list $sec"
+done
+
+# ---------------------------------------------------------------- configuration round trips
+wait_wifi() { # section -> 0 when up and not pending
+	local i=0 st
+	while [ $i -lt 40 ]; do
+		st=$(ubus -t 15 call network.wireless status)
+		[ "$(jf "$st" "@.$1.up")" = true ] && [ "$(jf "$st" "@.$1.pending")" = false ] && return 0
+		sleep 1; i=$((i + 1))
+	done
+	return 1
+}
+
+first_ap() { # device section -> wifi-iface section of its first AP
+	local s; ap_sec=""
+	_ap() { local d m; config_get d "$1" device; config_get m "$1" mode; [ "$d" = "$2" ] && [ "$m" = ap ] && [ -z "$ap_sec" ] && ap_sec="$1"; }
+	config_load wireless
+	config_foreach _ap wifi-iface "$1"
+	echo "$ap_sec"
+}
+
+# apply "key=value ..." to the radio ($1) and its AP ($2), wait, then run the check function ($3)
+run_case() {
+	local sec="$1" ap="$2" label="$3"; shift 3
+	local kv
+	for kv in "$@"; do
+		case "$kv" in
+			dev:*) kv=${kv#dev:}; [ -n "${kv#*=}" ] && uci set "wireless.$sec.${kv%%=*}=${kv#*=}" || uci -q delete "wireless.$sec.${kv%%=*}";;
+			*)     [ -n "${kv#*=}" ] && uci set "wireless.$ap.${kv%%=*}=${kv#*=}" || uci -q delete "wireless.$ap.${kv%%=*}";;
+		esac
+	done
+	uci commit wireless
+	wifi >/dev/null 2>&1
+	wait_wifi "$sec" || { fail "$label: radio did not come up"; return 1; }
+	sleep 2
+	return 0
+}
+
+if [ "$1" = "--config" ]; then
+	shift
+	sta_ssid=""; sta_key=""
+	[ "$1" = "--sta" ] && { sta_ssid="$2"; sta_key="$3"; }
+	echo "== configuration round trips (restoring /etc/config/wireless afterwards)"
+	cp /etc/config/wireless /tmp/wireless.wlblob-check
+	for r in $radios; do
+		sec=${r%%:*}; rest=${r#*:}; dev=${rest%%:*}; dis=${rest#*:}
+		[ "$dis" = 1 ] && continue
+		ap=$(first_ap "$sec")
+		[ -n "$ap" ] || { warn "$sec: no AP interface configured, skipped"; continue; }
+		band=$(uci -q get "wireless.$sec.band")
+		fl=$(iw freqlist "$dev")
+		ch0=$(jf "$fl" '@.results[0].channel'); ch1=$(jf "$fl" '@.results[*].channel' | tail -n 1)
+		w20=$([ "$band" = 2g ] && echo HT20 || echo VHT20)
+		uci set "wireless.$ap.ssid=wlblob-check"
+
+		run_case "$sec" "$ap" "$sec open" encryption=none key= && \
+			{ [ "$(wpa_auth "$dev")" = 0 ] && ok "$sec: encryption none" || fail "$sec: encryption none -> wpa_auth $(wl -i "$dev" wpa_auth)"; }
+		run_case "$sec" "$ap" "$sec psk2" encryption=psk2 key=check-key-123 && \
+			{ [ "$(wpa_auth "$dev")" = 128 ] && [ "$(wl -i "$dev" wsec)" = 4 ] && ok "$sec: encryption psk2 (CCMP)" || fail "$sec: psk2 -> wpa_auth $(wl -i "$dev" wpa_auth) wsec $(wl -i "$dev" wsec)"; }
+		run_case "$sec" "$ap" "$sec psk+psk2+ccmp" encryption=psk+psk2+ccmp key=check-key-123 && \
+			{ [ "$(wpa_auth "$dev")" = 132 ] && ok "$sec: encryption psk+psk2+ccmp (LuCI mixed mode)" || fail "$sec: psk+psk2+ccmp -> wpa_auth $(wl -i "$dev" wpa_auth)"; }
+		run_case "$sec" "$ap" "$sec psk" encryption=psk key=check-key-123 && \
+			{ [ "$(wpa_auth "$dev")" = 4 ] && ok "$sec: encryption psk" || fail "$sec: psk -> wpa_auth $(wl -i "$dev" wpa_auth)"; }
+		run_case "$sec" "$ap" "$sec hidden" encryption=psk2 key=check-key-123 hidden=1 && \
+			{ [ "$(wl -i "$dev" closed)" = 1 ] && ok "$sec: hidden ssid" || fail "$sec: hidden=1 but wl closed=$(wl -i "$dev" closed)"; }
+		uci -q delete "wireless.$ap.hidden"
+		run_case "$sec" "$ap" "$sec channel $ch1" "dev:channel=$ch1" "dev:htmode=$w20" && \
+			{ wl -i "$dev" status | grep -q "Channel: $ch1\b" && ok "$sec: channel $ch1" || fail "$sec: channel $ch1 -> $(wl -i "$dev" status | grep Channel)"; }
+		if [ "$band" = 2g ]; then
+			run_case "$sec" "$ap" "$sec HT40" "dev:channel=$ch0" dev:htmode=HT40 && \
+				{ wl -i "$dev" chanspec | grep -qE "^${ch0}[lu] " && ok "$sec: htmode HT40" || fail "$sec: HT40 -> $(wl -i "$dev" chanspec)"; }
+			run_case "$sec" "$ap" "$sec HT20" dev:htmode=HT20 && \
+				{ wl -i "$dev" chanspec | grep -qE "^${ch0} " && ok "$sec: htmode HT20" || fail "$sec: HT20 -> $(wl -i "$dev" chanspec)"; }
+		else
+			run_case "$sec" "$ap" "$sec VHT40" "dev:channel=$ch0" dev:htmode=VHT40 && \
+				{ wl -i "$dev" chanspec | grep -qE "^${ch0}[lu] " && ok "$sec: htmode VHT40" || fail "$sec: VHT40 -> $(wl -i "$dev" chanspec)"; }
+			run_case "$sec" "$ap" "$sec VHT80" dev:htmode=VHT80 && \
+				{ wl -i "$dev" chanspec | grep -qE "^${ch0}/80 " && ok "$sec: htmode VHT80" || fail "$sec: VHT80 -> $(wl -i "$dev" chanspec)"; }
+		fi
+		run_case "$sec" "$ap" "$sec without band/channel/htmode" dev:band= dev:channel= dev:htmode= && \
+			{ case "$band:$(wl -i "$dev" status | sed -n 's/.*Channel: \([0-9]*\).*/\1/p')" in
+				2g:[1-9]|2g:1[0-4]|5g:[3-9][0-9]|5g:1[0-9][0-9]) ok "$sec: missing band/channel/htmode stays on $band";;
+				*) fail "$sec: missing band/channel/htmode -> $(wl -i "$dev" status | grep Channel)";;
+			  esac; }
+		uci set "wireless.$sec.band=$band"; uci set "wireless.$sec.channel=$ch0"
+		uci set "wireless.$sec.htmode=$([ "$band" = 2g ] && echo HT20 || echo VHT80)"
+		# refused configurations: the radio comes up, the interface must not
+		uci set "wireless.$ap.encryption=wep-open"; uci set "wireless.$ap.key=1"; uci set "wireless.$ap.key1=0123456789"
+		uci commit wireless; wifi >/dev/null 2>&1; wait_wifi "$sec"
+		if [ -z "$(jf "$(ubus call network.wireless status)" "@.$sec.interfaces[0].ifname")" ]; then
+			ok "$sec: WEP is refused (interface not brought up)"
+		else
+			fail "$sec: WEP configuration brought the interface up ($(wl -i "$dev" wsec))"
+		fi
+		uci -q delete "wireless.$ap.key1"
+		uci set "wireless.$ap.encryption=none"; uci set "wireless.$ap.mode=adhoc"
+		uci commit wireless; wifi >/dev/null 2>&1; wait_wifi "$sec"
+		if [ -z "$(jf "$(ubus call network.wireless status)" "@.$sec.interfaces[0].ifname")" ]; then
+			ok "$sec: ad-hoc is refused"
+		else
+			fail "$sec: ad-hoc configuration brought an interface up"
+		fi
+		uci set "wireless.$ap.mode=ap"
+		if [ -n "$sta_ssid" ] && [ "$band" = 5g ]; then
+			uci set "wireless.$ap.mode=sta"; uci set "wireless.$ap.ssid=$sta_ssid"
+			uci set "wireless.$ap.encryption=psk2"; uci set "wireless.$ap.key=$sta_key"
+			uci commit wireless; wifi >/dev/null 2>&1; wait_wifi "$sec"
+			i=0; while [ $i -lt 30 ] && ! wl -i "$dev" assoc 2>/dev/null | grep -q "^SSID: \"$sta_ssid\""; do sleep 1; i=$((i + 1)); done
+			wl -i "$dev" assoc 2>/dev/null | grep -q "^SSID: \"$sta_ssid\"" && ok "$sec: client joined $sta_ssid" || fail "$sec: client did not join $sta_ssid"
+		fi
+	done
+	cp /tmp/wireless.wlblob-check /etc/config/wireless
+	uci commit wireless
+	wifi >/dev/null 2>&1
+	echo "configuration restored"
+fi
+
+echo "== $passes passed, $fails failed, $warns warnings"
+exit $fails
