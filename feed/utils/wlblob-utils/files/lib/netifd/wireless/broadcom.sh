@@ -102,12 +102,20 @@ wlblob_daemons_restart() {
 	setsid /usr/sbin/wlblob-daemons "$tok" </dev/null >/dev/null 2>&1 &
 }
 
+wlblob_unsupported_vif() {
+	json_select config
+	json_get_vars mode
+	json_select ..
+	wireless_setup_vif_failed "mode $mode is not supported (ap, sta)"
+}
+
 wlblob_setup_ap() {
 	local name="$1" vif bss
 	json_select config
 	json_get_vars mode ssid key isolate:0 hidden:0 maxassoc wpa_group_rekey:3600 macaddr
 	wireless_vif_parse_encryption
-	[ "$encryption" = "psk+psk2" ] && wpa=3	# LuCI spells psk-mixed this way for type broadcom
+	case "$encryption" in psk+psk2*) wpa=3;; esac	# LuCI spells psk-mixed this way for type broadcom
+	case "$encryption" in wep*) wireless_setup_vif_failed "WEP is not supported"; return 1;; esac
 	json_select ..
 
 	# first AP lives on the radio interface itself, the others on wlN.k (MBSS)
@@ -160,7 +168,8 @@ wlblob_setup_sta() {
 	json_select config
 	json_get_vars mode ssid key bssid
 	wireless_vif_parse_encryption
-	[ "$encryption" = "psk+psk2" ] && wpa=3	# LuCI spells psk-mixed this way for type broadcom
+	case "$encryption" in psk+psk2*) wpa=3;; esac	# LuCI spells psk-mixed this way for type broadcom
+	case "$encryption" in wep*) wireless_setup_vif_failed "WEP is not supported"; return 1;; esac
 	json_select ..
 
 	[ -n "$ssid" ] || { wireless_setup_vif_failed NO_SSID; return 1; }
@@ -195,6 +204,7 @@ wlblob_setup_sta() {
 drv_broadcom_setup() {
 	json_select config
 	json_get_vars ifname channel band htmode country txpower frameburst:1 distance macaddr
+	local cfg_band="$band"
 	_wdev_prepare_channel
 	json_select ..
 
@@ -207,9 +217,14 @@ drv_broadcom_setup() {
 	# device-level data must not be called "ifname": netifd treats that as a link to bring up
 	wireless_set_data wlif="$ifn"
 
+	# band/htmode/channel may be missing from the config (a LuCI save without channel data
+	# drops them); _wdev_prepare_channel then guesses 2g, take the band from the radio instead
+	[ -n "$cfg_band" ] || case "$(wl -i "$ifn" bands 2>/dev/null)" in *a*) band=5g;; *) band=2g;; esac
+	[ -n "$htmode" ] || htmode=$([ "$band" = "2g" ] && echo HT20 || echo VHT80)
+	[ "${auto_channel:-0}" -gt 0 -o -z "$channel" ] && channel=$([ "$band" = "2g" ] && echo 6 || echo 36)
+
 	wlblob_wl down
 	[ -n "$macaddr" ] && wlblob_wl cur_etheraddr "$macaddr"
-	[ "$auto_channel" -gt 0 ] && channel=$([ "$band" = "2g" ] && echo 6 || echo 36)
 	[ -n "$country" ] && wlblob_wl country "$country"
 	wlblob_wl chanspec "$(wlblob_chanspec "$channel" "$htmode" "$band")"
 	wlblob_wl frameburst "$frameburst"
@@ -222,6 +237,7 @@ drv_broadcom_setup() {
 	wlblob_wl mbss $([ "$n_ap" -gt 1 ] && echo 1 || echo 0)
 
 	has_sta=0; ap_count=0; vifs=""
+	for_each_interface "adhoc mesh monitor ahdemo" wlblob_unsupported_vif
 	for_each_interface "sta" wlblob_setup_sta
 	[ "$has_sta" = 0 ] && for_each_interface "ap" wlblob_setup_ap
 	wlnvram set "${ifn}_vifs=${vifs# }"

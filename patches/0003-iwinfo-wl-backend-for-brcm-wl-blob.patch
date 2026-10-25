@@ -1,10 +1,19 @@
 iwinfo: build the wl backend when kmod-brcm-wl-blob is selected
 
 Also provide the htmode/center_chan2 operations rpcd calls unconditionally
-(otherwise rpcd dereferences NULL and LuCI wireless status times out).
+(otherwise rpcd dereferences NULL and LuCI wireless status times out), a
+real channel list (WLC_GET_VALID_CHANNELS: the stock backend asked wireless
+extensions, which the driver does not have, so LuCI had no channels and
+cleared band/channel/htmode on save), and the control channel, center
+channel and frequency derived from the chanspec.
+
+ package/network/utils/iwinfo/Makefile              |   2 +-
+ .../patches/200-wl-add-htmode-center-chan2.patch   |  37 +++++++
+ ...reqlist-and-control-channel-from-chanspec.patch | 114 +++++++++++++++++++++
+ 3 files changed, 152 insertions(+), 1 deletion(-)
 
 diff --git a/package/network/utils/iwinfo/Makefile b/package/network/utils/iwinfo/Makefile
-index bc79992138..4d13450a64 100644
+index a809d4cca3..686ed73c4c 100644
 --- a/package/network/utils/iwinfo/Makefile
 +++ b/package/network/utils/iwinfo/Makefile
 @@ -83,7 +83,7 @@ MAKE_FLAGS += \
@@ -59,3 +68,123 @@ index 0000000000..95f196bb45
 + 	.frequency        = wl_get_frequency,
 + 	.frequency_offset = wl_get_frequency_offset,
 + 	.txpower          = wl_get_txpower,
+diff --git a/package/network/utils/iwinfo/patches/201-wl-freqlist-and-control-channel-from-chanspec.patch b/package/network/utils/iwinfo/patches/201-wl-freqlist-and-control-channel-from-chanspec.patch
+new file mode 100644
+index 0000000000..8dbb172906
+--- /dev/null
++++ b/package/network/utils/iwinfo/patches/201-wl-freqlist-and-control-channel-from-chanspec.patch
+@@ -0,0 +1,114 @@
++--- a/iwinfo_wl.c
+++++ b/iwinfo_wl.c
++@@ -139,15 +139,65 @@ static int wl_get_bssid(const char *ifna
++ 	return ret;
++ }
++ 
+++#ifndef WLC_GET_VALID_CHANNELS
+++#define WLC_GET_VALID_CHANNELS	217
+++#endif
+++#define WL_MAXCHANNEL		224
+++
+++static int wl_get_chanspec(const char *ifname, unsigned int *cs)
+++{
+++	char tmp[32] = "chanspec";
+++
+++	if (wl_ioctl(ifname, WLC_GET_VAR, tmp, sizeof(tmp)))
+++		return -1;
+++
+++	memcpy(cs, tmp, sizeof(*cs));
+++	return 0;
+++}
+++
+++/* the channel field of a 40/80/160 MHz chanspec is the center of the band, the sideband bits
+++ * select the primary 20 MHz channel inside it */
+++static int wl_chanspec_ctl_channel(unsigned int cs)
+++{
+++	int ch = cs & 0xff, sb = (cs & 0x0700) >> 8;
+++
+++	switch (cs & 0x3800) {
+++	case 0x1800: return sb ? ch + 2 : ch - 2;
+++	case 0x2000: return ch - 6 + 4 * sb;
+++	case 0x2800: return ch - 14 + 4 * sb;
+++	default:     return ch;
+++	}
+++}
+++
+++static int wl_channel_mhz(int ch)
+++{
+++	if (ch == 14)
+++		return 2484;
+++	if (ch < 14)
+++		return 2407 + ch * 5;
+++	return 5000 + ch * 5;
+++}
+++
++ static int wl_get_channel(const char *ifname, int *buf)
++ {
++-	return wl_ioctl(ifname, WLC_GET_CHANNEL, buf, sizeof(buf));
+++	unsigned int cs;
+++
+++	if (wl_get_chanspec(ifname, &cs))
+++		return wl_ioctl(ifname, WLC_GET_CHANNEL, buf, sizeof(*buf));
+++
+++	*buf = wl_chanspec_ctl_channel(cs);
+++	return 0;
++ }
++ 
++ static int wl_get_center_chan1(const char *ifname, int *buf)
++ {
++-	/* Not Supported */
++-	return -1;
+++	unsigned int cs;
+++
+++	if (wl_get_chanspec(ifname, &cs) || (cs & 0x3800) == 0x1000)
+++		return -1;
+++
+++	*buf = cs & 0xff;
+++	return 0;
++ }
++ 
++ static int wl_get_center_chan2(const char *ifname, int *buf)
++@@ -158,7 +208,13 @@ static int wl_get_center_chan2(const cha
++ 
++ static int wl_get_frequency(const char *ifname, int *buf)
++ {
++-	return wext_ops.frequency(ifname, buf);
+++	int ch;
+++
+++	if (wl_get_channel(ifname, &ch))
+++		return -1;
+++
+++	*buf = wl_channel_mhz(ch);
+++	return 0;
++ }
++ 
++ static int wl_get_txpower(const char *ifname, int *buf)
++@@ -541,7 +597,26 @@ static int wl_get_scanlist(const char *i
++ 
++ static int wl_get_freqlist(const char *ifname, char *buf, int *len)
++ {
++-	return wext_ops.freqlist(ifname, buf, len);
+++	/* wl_uint32_list_t: the driver wants room for every channel number */
+++	struct { uint32_t count; uint32_t element[WL_MAXCHANNEL + 1]; } list = { .count = WL_MAXCHANNEL + 1 };
+++	struct iwinfo_freqlist_entry *e = (struct iwinfo_freqlist_entry *)buf;
+++	unsigned int i, n = 0;
+++
+++	if (wl_ioctl(ifname, WLC_GET_VALID_CHANNELS, &list, sizeof(list)))
+++		return -1;
+++
+++	for (i = 0; i < list.count && i <= WL_MAXCHANNEL; i++, n++) {
+++		int ch = list.element[i];
+++
+++		e[n].band = ch <= 14 ? IWINFO_BAND_24 : IWINFO_BAND_5;
+++		e[n].channel = ch;
+++		e[n].mhz = wl_channel_mhz(ch);
+++		e[n].restricted = 0;
+++		e[n].flags = 0;
+++	}
+++
+++	*len = n * sizeof(*e);
+++	return 0;
++ }
++ 
++ static int wl_get_country(const char *ifname, char *buf)
