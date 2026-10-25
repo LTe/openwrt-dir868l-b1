@@ -12,7 +12,11 @@ experiments described below. On the default FreshTomato core, `cso_offload`,
 `tx_expand` default to enabled; `tx_expand_min_len` defaults to 256 bytes.
 The all-protocol `rx_gro` and `amsdu_pool` options remain disabled. Hardware
 checksums apply to supported BCM4360 IPv4 TCP packets; other traffic uses software.
-Neither TSO nor the BGMAC headroom experiment is included.
+Neither TSO nor the BGMAC headroom change is included in the v0.3.1 tag.
+Subsequent builds reserve additional Ethernet RX headroom to avoid copying
+forwarded packets before wireless transmission. Its separate
+[measurement and validation report](BGMAC-HEADROOM.md) includes paired CPU
+results, IPv6, A-MSDU, 2.4 GHz and the observed UDP losses.
 
 Release integration also exposed a short-stream boundary missed by the earlier
 bulk tests: with A-MSDU and the packet optimizations enabled, an 8-byte-record TCP

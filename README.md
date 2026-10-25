@@ -43,6 +43,21 @@ on the client and radio conditions. Test details, retransmissions and UDP observ
 in the [v0.3.1 validation report](docs/releases/v0.3.1-validation.md); earlier measurements
 and experiments are in [Performance and driver research](docs/PERFORMANCE.md).
 
+Additional Ethernet RX headroom in builds **after v0.3.1**, measured separately
+on 2026-10-25 with the v0.3.1 wireless options enabled and TX A-MSDU off:
+
+| Bridge traffic | Offered rate | CPU, original headroom | CPU, extra headroom |
+|---|---:|---:|---:|
+| 5 GHz Wi-Fi → Ethernet | 80 Mbit/s | 39.5% | 37.3% |
+| Ethernet → 5 GHz Wi-Fi | 80 Mbit/s | 59.0% | 51.7% |
+| 2.4 GHz Wi-Fi → Ethernet | 30 Mbit/s | 19.0% | 18.2% |
+| Ethernet → 2.4 GHz Wi-Fi | 30 Mbit/s | 21.9% | 18.3% |
+
+These are means of four 15-second runs per setting on 5 GHz and two on 2.4 GHz,
+using an isolated Ethernet driver replacement. The wired path is still limited
+to 100 Mbit/s. Test conditions, variability and packet checks are in the
+[Ethernet headroom report](docs/BGMAC-HEADROOM.md).
+
 ## Download and install
 
 Ready-made images are on the [Releases](https://github.com/LTe/openwrt-dir868l-b1/releases) page:
@@ -85,7 +100,7 @@ when coming from a different OpenWrt build.
 | path | what |
 |---|---|
 | `openwrt/` | upstream OpenWrt, git submodule pinned to a commit |
-| `patches/` | applied on top of it: DIR-868L B1 device support (PR openwrt/openwrt#20684), a netifd fix, iwinfo `wl` backend |
+| `patches/` | applied on top of it: DIR-868L B1 device support (PR openwrt/openwrt#20684), a netifd fix, iwinfo `wl` backend, Ethernet RX headroom |
 | `feed/` | an OpenWrt package feed: `kmod-brcm-wl-blob` (driver), `brcm-wl-tools` (nas, eapd, wlconf, wl, libnvram), `wlblob-utils` (netifd integration) |
 | `config.seed` | the `.config` delta: target, device, these packages, LuCI |
 | `Makefile` | glue: submodule, patches, feed, config, build, copy images to `out/` |

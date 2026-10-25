@@ -1,0 +1,39 @@
+diff --git a/target/linux/bcm53xx/patches-6.18/790-net-bgmac-reserve-headroom-for-wl-forwarding.patch b/target/linux/bcm53xx/patches-6.18/790-net-bgmac-reserve-headroom-for-wl-forwarding.patch
+new file mode 100644
+index 0000000..9f426cf
+--- /dev/null
++++ b/target/linux/bcm53xx/patches-6.18/790-net-bgmac-reserve-headroom-for-wl-forwarding.patch
+@@ -0,0 +1,33 @@
++diff --git a/drivers/net/ethernet/broadcom/bgmac.c b/drivers/net/ethernet/broadcom/bgmac.c
++index 3e9c571..0cf1f88 100644
++--- a/drivers/net/ethernet/broadcom/bgmac.c
+++++ b/drivers/net/ethernet/broadcom/bgmac.c
++@@ -454,8 +454,8 @@ static int bgmac_dma_rx_read(struct bgmac *bgmac, struct bgmac_dma_ring *ring,
++ 				break;
++ 			}
++ 
++-			if (len > BGMAC_RX_ALLOC_SIZE) {
++-				netdev_err(bgmac->net_dev, "Found oversized packet at slot %d, DMA issue!\n",
+++			if (len < ETH_FCS_LEN || len > BGMAC_RX_MAX_FRAME_SIZE) {
+++				netdev_err(bgmac->net_dev, "Found invalid frame length at slot %d, DMA issue!\n",
++ 					   ring->start);
++ 				put_page(virt_to_head_page(buf));
++ 				bgmac->net_dev->stats.rx_length_errors++;
++diff --git a/drivers/net/ethernet/broadcom/bgmac.h b/drivers/net/ethernet/broadcom/bgmac.h
++index 6fee9a4..1c088b4 100644
++--- a/drivers/net/ethernet/broadcom/bgmac.h
+++++ b/drivers/net/ethernet/broadcom/bgmac.h
++@@ -326,8 +326,12 @@
++ 
++ #define BGMAC_RX_HEADER_LEN			28		/* Last 24 bytes are unused. Well... */
++ #define BGMAC_RX_FRAME_OFFSET			30		/* There are 2 unused bytes between header and real data */
+++/* Reserve space for wl TX headers when forwarding Ethernet RX. Hardware
+++ * still receives into the same-sized DMA mapping after this host headroom.
+++ */
+++#define BGMAC_RX_EXTRA_HEADROOM			192
++ #define BGMAC_RX_BUF_OFFSET			(NET_SKB_PAD + NET_IP_ALIGN - \
++-						 BGMAC_RX_FRAME_OFFSET)
+++						 BGMAC_RX_FRAME_OFFSET + BGMAC_RX_EXTRA_HEADROOM)
++ #define BGMAC_RX_MAX_FRAME_SIZE			1536
++ #define BGMAC_RX_BUF_SIZE			(BGMAC_RX_FRAME_OFFSET + BGMAC_RX_MAX_FRAME_SIZE)
++ #define BGMAC_RX_ALLOC_SIZE			(SKB_DATA_ALIGN(BGMAC_RX_BUF_SIZE + BGMAC_RX_BUF_OFFSET) + \

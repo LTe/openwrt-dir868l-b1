@@ -1,0 +1,1816 @@
+{
+  "module_sha256": "471e299d1ec9c14eed5f0032235390d3262d0781b44072d8e4ddaaa3d81de573",
+  "cpu_trials": [
+    {
+      "series": "runtime-03",
+      "index": 0,
+      "headroom": 0,
+      "direction": "up",
+      "mbps": 79.9296942808372,
+      "retransmits": 0,
+      "cpu": 40.69920844327177,
+      "counters": {
+        "tx_seen": 44077,
+        "tx_copy": 44068,
+        "tx_copy_bytes": 2924601,
+        "tx_copy_headroom": 44068,
+        "tx_copy_cloned": 152,
+        "tx_copy_nonlinear": 0,
+        "tx_expanded": 19,
+        "tx_expand_failed": 0,
+        "tx_headroom_under64": 0,
+        "tx_headroom_under256": 44068,
+        "cso_hw": 1,
+        "cso_sw": 7,
+        "cso_invalid": 0
+      }
+    },
+    {
+      "series": "runtime-03",
+      "index": 0,
+      "headroom": 0,
+      "direction": "down",
+      "mbps": 79.96566006331814,
+      "retransmits": 0,
+      "cpu": 53.29380764163373,
+      "counters": {
+        "tx_seen": 104292,
+        "tx_copy": 104289,
+        "tx_copy_bytes": 156965961,
+        "tx_copy_headroom": 104289,
+        "tx_copy_cloned": 84,
+        "tx_copy_nonlinear": 0,
+        "tx_expanded": 104173,
+        "tx_expand_failed": 0,
+        "tx_headroom_under64": 0,
+        "tx_headroom_under256": 104289,
+        "cso_hw": 0,
+        "cso_sw": 2,
+        "cso_invalid": 0
+      }
+    },
+    {
+      "series": "runtime-03",
+      "index": 1,
+      "headroom": 192,
+      "direction": "up",
+      "mbps": 79.9319152293377,
+      "retransmits": 0,
+      "cpu": 43.12952005259697,
+      "counters": {
+        "tx_seen": 43993,
+        "tx_copy": 46,
+        "tx_copy_bytes": 6022,
+        "tx_copy_headroom": 0,
+        "tx_copy_cloned": 46,
+        "tx_copy_nonlinear": 0,
+        "tx_expanded": 0,
+        "tx_expand_failed": 0,
+        "tx_headroom_under64": 0,
+        "tx_headroom_under256": 0,
+        "cso_hw": 0,
+        "cso_sw": 2,
+        "cso_invalid": 0
+      }
+    },
+    {
+      "series": "runtime-03",
+      "index": 1,
+      "headroom": 192,
+      "direction": "down",
+      "mbps": 79.9678616871801,
+      "retransmits": 0,
+      "cpu": 54.05940594059406,
+      "counters": {
+        "tx_seen": 104264,
+        "tx_copy": 48,
+        "tx_copy_bytes": 6100,
+        "tx_copy_headroom": 0,
+        "tx_copy_cloned": 48,
+        "tx_copy_nonlinear": 0,
+        "tx_expanded": 0,
+        "tx_expand_failed": 0,
+        "tx_headroom_under64": 0,
+        "tx_headroom_under256": 0,
+        "cso_hw": 0,
+        "cso_sw": 2,
+        "cso_invalid": 0
+      }
+    },
+    {
+      "series": "runtime-03",
+      "index": 2,
+      "headroom": 192,
+      "direction": "up",
+      "mbps": 79.93001383417092,
+      "retransmits": 0,
+      "cpu": 35.64356435643564,
+      "counters": {
+        "tx_seen": 43994,
+        "tx_copy": 128,
+        "tx_copy_bytes": 29564,
+        "tx_copy_headroom": 0,
+        "tx_copy_cloned": 128,
+        "tx_copy_nonlinear": 0,
+        "tx_expanded": 30,
+        "tx_expand_failed": 0,
+        "tx_headroom_under64": 0,
+        "tx_headroom_under256": 0,
+        "cso_hw": 0,
+        "cso_sw": 2,
+        "cso_invalid": 0
+      }
+    },
+    {
+      "series": "runtime-03",
+      "index": 2,
+      "headroom": 192,
+      "direction": "down",
+      "mbps": 79.9691144812668,
+      "retransmits": 0,
+      "cpu": 54.02374670184697,
+      "counters": {
+        "tx_seen": 104376,
+        "tx_copy": 158,
+        "tx_copy_bytes": 34992,
+        "tx_copy_headroom": 0,
+        "tx_copy_cloned": 158,
+        "tx_copy_nonlinear": 0,
+        "tx_expanded": 36,
+        "tx_expand_failed": 0,
+        "tx_headroom_under64": 0,
+        "tx_headroom_under256": 0,
+        "cso_hw": 0,
+        "cso_sw": 2,
+        "cso_invalid": 0
+      }
+    },
+    {
+      "series": "runtime-03",
+      "index": 3,
+      "headroom": 0,
+      "direction": "up",
+      "mbps": 79.93358767969417,
+      "retransmits": 0,
+      "cpu": 44.18910045961917,
+      "counters": {
+        "tx_seen": 44078,
+        "tx_copy": 44073,
+        "tx_copy_bytes": 2912819,
+        "tx_copy_headroom": 44071,
+        "tx_copy_cloned": 58,
+        "tx_copy_nonlinear": 0,
+        "tx_expanded": 1,
+        "tx_expand_failed": 0,
+        "tx_headroom_under64": 0,
+        "tx_headroom_under256": 44067,
+        "cso_hw": 0,
+        "cso_sw": 2,
+        "cso_invalid": 0
+      }
+    },
+    {
+      "series": "runtime-03",
+      "index": 3,
+      "headroom": 0,
+      "direction": "down",
+      "mbps": 79.96574535399499,
+      "retransmits": 0,
+      "cpu": 61.147757255936675,
+      "counters": {
+        "tx_seen": 104367,
+        "tx_copy": 104364,
+        "tx_copy_bytes": 157009279,
+        "tx_copy_headroom": 104364,
+        "tx_copy_cloned": 94,
+        "tx_copy_nonlinear": 0,
+        "tx_expanded": 104276,
+        "tx_expand_failed": 0,
+        "tx_headroom_under64": 0,
+        "tx_headroom_under256": 104364,
+        "cso_hw": 0,
+        "cso_sw": 2,
+        "cso_invalid": 0
+      }
+    },
+    {
+      "series": "runtime-05",
+      "index": 0,
+      "headroom": 192,
+      "direction": "up",
+      "mbps": 79.93159566080064,
+      "retransmits": 0,
+      "cpu": 35.30961791831358,
+      "counters": {
+        "tx_seen": 44050,
+        "tx_copy": 52,
+        "tx_copy_bytes": 7504,
+        "tx_copy_headroom": 0,
+        "tx_copy_cloned": 52,
+        "tx_copy_nonlinear": 0,
+        "tx_expanded": 0,
+        "tx_expand_failed": 0,
+        "tx_headroom_under64": 0,
+        "tx_headroom_under256": 0,
+        "cso_hw": 0,
+        "cso_sw": 2,
+        "cso_invalid": 0
+      }
+    },
+    {
+      "series": "runtime-05",
+      "index": 0,
+      "headroom": 192,
+      "direction": "down",
+      "mbps": 79.96746719844498,
+      "retransmits": 0,
+      "cpu": 50.428477257745556,
+      "counters": {
+        "tx_seen": 104257,
+        "tx_copy": 48,
+        "tx_copy_bytes": 6024,
+        "tx_copy_headroom": 0,
+        "tx_copy_cloned": 48,
+        "tx_copy_nonlinear": 0,
+        "tx_expanded": 0,
+        "tx_expand_failed": 0,
+        "tx_headroom_under64": 0,
+        "tx_headroom_under256": 0,
+        "cso_hw": 0,
+        "cso_sw": 2,
+        "cso_invalid": 0
+      }
+    },
+    {
+      "series": "runtime-05",
+      "index": 1,
+      "headroom": 0,
+      "direction": "up",
+      "mbps": 79.93552120474997,
+      "retransmits": 0,
+      "cpu": 35.86025049439684,
+      "counters": {
+        "tx_seen": 44003,
+        "tx_copy": 44000,
+        "tx_copy_bytes": 2920523,
+        "tx_copy_headroom": 44000,
+        "tx_copy_cloned": 122,
+        "tx_copy_nonlinear": 0,
+        "tx_expanded": 29,
+        "tx_expand_failed": 0,
+        "tx_headroom_under64": 0,
+        "tx_headroom_under256": 44000,
+        "cso_hw": 0,
+        "cso_sw": 2,
+        "cso_invalid": 0
+      }
+    },
+    {
+      "series": "runtime-05",
+      "index": 1,
+      "headroom": 0,
+      "direction": "down",
+      "mbps": 79.96566006331814,
+      "retransmits": 0,
+      "cpu": 61.33069828722002,
+      "counters": {
+        "tx_seen": 104375,
+        "tx_copy": 104372,
+        "tx_copy_bytes": 157014279,
+        "tx_copy_headroom": 104372,
+        "tx_copy_cloned": 86,
+        "tx_copy_nonlinear": 0,
+        "tx_expanded": 104276,
+        "tx_expand_failed": 0,
+        "tx_headroom_under64": 0,
+        "tx_headroom_under256": 104372,
+        "cso_hw": 0,
+        "cso_sw": 2,
+        "cso_invalid": 0
+      }
+    },
+    {
+      "series": "runtime-05",
+      "index": 2,
+      "headroom": 0,
+      "direction": "up",
+      "mbps": 80.00511235417846,
+      "retransmits": 0,
+      "cpu": 37.071240105540895,
+      "counters": {
+        "tx_seen": 44062,
+        "tx_copy": 44059,
+        "tx_copy_bytes": 2923237,
+        "tx_copy_headroom": 44059,
+        "tx_copy_cloned": 118,
+        "tx_copy_nonlinear": 0,
+        "tx_expanded": 23,
+        "tx_expand_failed": 0,
+        "tx_headroom_under64": 0,
+        "tx_headroom_under256": 44059,
+        "cso_hw": 0,
+        "cso_sw": 2,
+        "cso_invalid": 0
+      }
+    },
+    {
+      "series": "runtime-05",
+      "index": 2,
+      "headroom": 0,
+      "direction": "down",
+      "mbps": 79.96576134601715,
+      "retransmits": 0,
+      "cpu": 60.250494396835855,
+      "counters": {
+        "tx_seen": 104274,
+        "tx_copy": 104271,
+        "tx_copy_bytes": 156964597,
+        "tx_copy_headroom": 104271,
+        "tx_copy_cloned": 64,
+        "tx_copy_nonlinear": 0,
+        "tx_expanded": 104170,
+        "tx_expand_failed": 0,
+        "tx_headroom_under64": 0,
+        "tx_headroom_under256": 104271,
+        "cso_hw": 0,
+        "cso_sw": 2,
+        "cso_invalid": 0
+      }
+    },
+    {
+      "series": "runtime-05",
+      "index": 3,
+      "headroom": 192,
+      "direction": "up",
+      "mbps": 79.91066948523586,
+      "retransmits": 0,
+      "cpu": 35.06921555702044,
+      "counters": {
+        "tx_seen": 43906,
+        "tx_copy": 54,
+        "tx_copy_bytes": 8100,
+        "tx_copy_headroom": 0,
+        "tx_copy_cloned": 54,
+        "tx_copy_nonlinear": 0,
+        "tx_expanded": 0,
+        "tx_expand_failed": 0,
+        "tx_headroom_under64": 0,
+        "tx_headroom_under256": 0,
+        "cso_hw": 0,
+        "cso_sw": 2,
+        "cso_invalid": 0
+      }
+    },
+    {
+      "series": "runtime-05",
+      "index": 3,
+      "headroom": 192,
+      "direction": "down",
+      "mbps": 79.96573469265044,
+      "retransmits": 0,
+      "cpu": 48.187211601845746,
+      "counters": {
+        "tx_seen": 104338,
+        "tx_copy": 130,
+        "tx_copy_bytes": 17052,
+        "tx_copy_headroom": 0,
+        "tx_copy_cloned": 130,
+        "tx_copy_nonlinear": 0,
+        "tx_expanded": 4,
+        "tx_expand_failed": 0,
+        "tx_headroom_under64": 0,
+        "tx_headroom_under256": 0,
+        "cso_hw": 0,
+        "cso_sw": 2,
+        "cso_invalid": 0
+      }
+    },
+    {
+      "series": "runtime-07-2g/bench",
+      "index": 0,
+      "headroom": 0,
+      "direction": "up",
+      "mbps": 29.952370282986674,
+      "retransmits": 3,
+      "cpu": 18.76234364713627,
+      "counters": {
+        "tx_seen": 17026,
+        "tx_copy": 17023,
+        "tx_copy_bytes": 1132421,
+        "tx_copy_headroom": 17021,
+        "tx_copy_cloned": 82,
+        "tx_copy_nonlinear": 0,
+        "tx_expanded": 1,
+        "tx_expand_failed": 0,
+        "tx_headroom_under64": 0,
+        "tx_headroom_under256": 17021,
+        "cso_hw": 0,
+        "cso_sw": 0,
+        "cso_invalid": 0
+      }
+    },
+    {
+      "series": "runtime-07-2g/bench",
+      "index": 0,
+      "headroom": 0,
+      "direction": "down",
+      "mbps": 29.98809806655579,
+      "retransmits": 24,
+      "cpu": 20.039551746868824,
+      "counters": {
+        "tx_seen": 39289,
+        "tx_copy": 39286,
+        "tx_copy_bytes": 58982597,
+        "tx_copy_headroom": 39286,
+        "tx_copy_cloned": 114,
+        "tx_copy_nonlinear": 0,
+        "tx_expanded": 39159,
+        "tx_expand_failed": 0,
+        "tx_headroom_under64": 0,
+        "tx_headroom_under256": 39286,
+        "cso_hw": 0,
+        "cso_sw": 0,
+        "cso_invalid": 0
+      }
+    },
+    {
+      "series": "runtime-07-2g/bench",
+      "index": 1,
+      "headroom": 192,
+      "direction": "up",
+      "mbps": 29.968509418774048,
+      "retransmits": 1,
+      "cpu": 18.25972313777192,
+      "counters": {
+        "tx_seen": 16769,
+        "tx_copy": 118,
+        "tx_copy_bytes": 19058,
+        "tx_copy_headroom": 0,
+        "tx_copy_cloned": 118,
+        "tx_copy_nonlinear": 0,
+        "tx_expanded": 14,
+        "tx_expand_failed": 0,
+        "tx_headroom_under64": 0,
+        "tx_headroom_under256": 0,
+        "cso_hw": 0,
+        "cso_sw": 0,
+        "cso_invalid": 0
+      }
+    },
+    {
+      "series": "runtime-07-2g/bench",
+      "index": 1,
+      "headroom": 192,
+      "direction": "down",
+      "mbps": 29.988339963015818,
+      "retransmits": 34,
+      "cpu": 20.092226613965746,
+      "counters": {
+        "tx_seen": 39279,
+        "tx_copy": 96,
+        "tx_copy_bytes": 14030,
+        "tx_copy_headroom": 0,
+        "tx_copy_cloned": 96,
+        "tx_copy_nonlinear": 0,
+        "tx_expanded": 4,
+        "tx_expand_failed": 0,
+        "tx_headroom_under64": 0,
+        "tx_headroom_under256": 0,
+        "cso_hw": 0,
+        "cso_sw": 0,
+        "cso_invalid": 0
+      }
+    },
+    {
+      "series": "runtime-07-2g/bench",
+      "index": 2,
+      "headroom": 192,
+      "direction": "up",
+      "mbps": 29.93517076803191,
+      "retransmits": 0,
+      "cpu": 18.223684210526315,
+      "counters": {
+        "tx_seen": 16851,
+        "tx_copy": 116,
+        "tx_copy_bytes": 21704,
+        "tx_copy_headroom": 0,
+        "tx_copy_cloned": 116,
+        "tx_copy_nonlinear": 0,
+        "tx_expanded": 18,
+        "tx_expand_failed": 0,
+        "tx_headroom_under64": 0,
+        "tx_headroom_under256": 0,
+        "cso_hw": 0,
+        "cso_sw": 0,
+        "cso_invalid": 0
+      }
+    },
+    {
+      "series": "runtime-07-2g/bench",
+      "index": 2,
+      "headroom": 192,
+      "direction": "down",
+      "mbps": 29.987118525748617,
+      "retransmits": 37,
+      "cpu": 16.413974950560316,
+      "counters": {
+        "tx_seen": 39251,
+        "tx_copy": 64,
+        "tx_copy_bytes": 7286,
+        "tx_copy_headroom": 0,
+        "tx_copy_cloned": 64,
+        "tx_copy_nonlinear": 0,
+        "tx_expanded": 0,
+        "tx_expand_failed": 0,
+        "tx_headroom_under64": 0,
+        "tx_headroom_under256": 0,
+        "cso_hw": 0,
+        "cso_sw": 0,
+        "cso_invalid": 0
+      }
+    },
+    {
+      "series": "runtime-07-2g/bench",
+      "index": 3,
+      "headroom": 0,
+      "direction": "up",
+      "mbps": 29.95488738627305,
+      "retransmits": 1,
+      "cpu": 19.301712779973645,
+      "counters": {
+        "tx_seen": 16868,
+        "tx_copy": 16865,
+        "tx_copy_bytes": 1161477,
+        "tx_copy_headroom": 16867,
+        "tx_copy_cloned": 120,
+        "tx_copy_nonlinear": 0,
+        "tx_expanded": 109,
+        "tx_expand_failed": 0,
+        "tx_headroom_under64": 0,
+        "tx_headroom_under256": 16867,
+        "cso_hw": 0,
+        "cso_sw": 0,
+        "cso_invalid": 0
+      }
+    },
+    {
+      "series": "runtime-07-2g/bench",
+      "index": 3,
+      "headroom": 0,
+      "direction": "down",
+      "mbps": 29.987146511740768,
+      "retransmits": 41,
+      "cpu": 23.715415019762844,
+      "counters": {
+        "tx_seen": 39299,
+        "tx_copy": 39296,
+        "tx_copy_bytes": 58996798,
+        "tx_copy_headroom": 39296,
+        "tx_copy_cloned": 110,
+        "tx_copy_nonlinear": 0,
+        "tx_expanded": 39172,
+        "tx_expand_failed": 0,
+        "tx_headroom_under64": 0,
+        "tx_headroom_under256": 39296,
+        "cso_hw": 0,
+        "cso_sw": 0,
+        "cso_invalid": 0
+      }
+    }
+  ],
+  "payload_trials": [
+    {
+      "series": "runtime-04-integrity/payload",
+      "test": "tcp-65507-down",
+      "records": [
+        {
+          "bad_payload": 0,
+          "bytes": 33539584,
+          "duplicates": 0,
+          "expected": 512,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 512,
+          "protocol": "tcp",
+          "seconds": 2.643877838
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 33539584,
+          "duplicates": 0,
+          "expected": 512,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 512,
+          "protocol": "tcp",
+          "seconds": 2.866781773
+        }
+      ]
+    },
+    {
+      "series": "runtime-04-integrity/payload",
+      "test": "tcp-65507-up",
+      "records": [
+        {
+          "bad_payload": 0,
+          "bytes": 33539584,
+          "duplicates": 0,
+          "expected": 512,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 512,
+          "protocol": "tcp",
+          "seconds": 2.695422959
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 33539584,
+          "duplicates": 0,
+          "expected": 512,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 512,
+          "protocol": "tcp",
+          "seconds": 2.892577141
+        }
+      ]
+    },
+    {
+      "series": "runtime-04-integrity/payload",
+      "test": "udp-1400-down",
+      "records": [
+        {
+          "bad_payload": 0,
+          "bytes": 70000000,
+          "duplicates": 0,
+          "expected": 50000,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 50000,
+          "protocol": "udp",
+          "seconds": 11.197493469
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 70000000,
+          "duplicates": 0,
+          "expected": 50000,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 50000,
+          "protocol": "udp",
+          "seconds": 11.206253067
+        }
+      ]
+    },
+    {
+      "series": "runtime-04-integrity/payload",
+      "test": "udp-1400-up",
+      "records": [
+        {
+          "bad_payload": 0,
+          "bytes": 70000000,
+          "duplicates": 0,
+          "expected": 50000,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 50000,
+          "protocol": "udp",
+          "seconds": 11.197719397
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 70000000,
+          "duplicates": 0,
+          "expected": 50000,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 50000,
+          "protocol": "udp",
+          "seconds": 11.257234650000001
+        }
+      ]
+    },
+    {
+      "series": "runtime-04-integrity/payload",
+      "test": "udp-65507-down",
+      "records": [
+        {
+          "bad_payload": 0,
+          "bytes": 8384896,
+          "duplicates": 0,
+          "expected": 128,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 128,
+          "protocol": "udp",
+          "seconds": 4.472203704
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 8384896,
+          "duplicates": 0,
+          "expected": 128,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 128,
+          "protocol": "udp",
+          "seconds": 4.449821378
+        }
+      ]
+    },
+    {
+      "series": "runtime-04-integrity/payload",
+      "test": "udp-65507-up",
+      "records": [
+        {
+          "bad_payload": 0,
+          "bytes": 8384896,
+          "duplicates": 0,
+          "expected": 128,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 128,
+          "protocol": "udp",
+          "seconds": 4.473068552
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 8384896,
+          "duplicates": 0,
+          "expected": 128,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 128,
+          "protocol": "udp",
+          "seconds": 4.502994595
+        }
+      ]
+    },
+    {
+      "series": "runtime-06-extended/ipv6",
+      "test": "tcp-65507-down",
+      "records": [
+        {
+          "bad_payload": 0,
+          "bytes": 33539584,
+          "duplicates": 0,
+          "expected": 512,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 512,
+          "protocol": "tcp",
+          "seconds": 2.6661283669999998
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 33539584,
+          "duplicates": 0,
+          "expected": 512,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 512,
+          "protocol": "tcp",
+          "seconds": 2.910133969
+        }
+      ]
+    },
+    {
+      "series": "runtime-06-extended/ipv6",
+      "test": "tcp-65507-up",
+      "records": [
+        {
+          "bad_payload": 0,
+          "bytes": 33539584,
+          "duplicates": 0,
+          "expected": 512,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 512,
+          "protocol": "tcp",
+          "seconds": 2.73306901
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 33539584,
+          "duplicates": 0,
+          "expected": 512,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 512,
+          "protocol": "tcp",
+          "seconds": 2.891722922
+        }
+      ]
+    },
+    {
+      "series": "runtime-06-extended/ipv6",
+      "test": "udp-1400-down",
+      "records": [
+        {
+          "bad_payload": 0,
+          "bytes": 70000000,
+          "duplicates": 0,
+          "expected": 50000,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 50000,
+          "protocol": "udp",
+          "seconds": 11.196555466
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 70000000,
+          "duplicates": 0,
+          "expected": 50000,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 50000,
+          "protocol": "udp",
+          "seconds": 11.20447818
+        }
+      ]
+    },
+    {
+      "series": "runtime-06-extended/ipv6",
+      "test": "udp-1400-up",
+      "records": [
+        {
+          "bad_payload": 0,
+          "bytes": 70000000,
+          "duplicates": 0,
+          "expected": 50000,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 50000,
+          "protocol": "udp",
+          "seconds": 11.197474945
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 70000000,
+          "duplicates": 0,
+          "expected": 50000,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 50000,
+          "protocol": "udp",
+          "seconds": 11.257383977
+        }
+      ]
+    },
+    {
+      "series": "runtime-06-extended/ipv6",
+      "test": "udp-65507-down",
+      "records": [
+        {
+          "bad_payload": 0,
+          "bytes": 8384896,
+          "duplicates": 0,
+          "expected": 128,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 128,
+          "protocol": "udp",
+          "seconds": 4.472032353
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 8384896,
+          "duplicates": 0,
+          "expected": 128,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 128,
+          "protocol": "udp",
+          "seconds": 4.450639245
+        }
+      ]
+    },
+    {
+      "series": "runtime-06-extended/ipv6",
+      "test": "udp-65507-up",
+      "records": [
+        {
+          "bad_payload": 0,
+          "bytes": 8384896,
+          "duplicates": 0,
+          "expected": 128,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 128,
+          "protocol": "udp",
+          "seconds": 4.472535329
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 8384896,
+          "duplicates": 0,
+          "expected": 128,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 128,
+          "protocol": "udp",
+          "seconds": 4.503033232
+        }
+      ]
+    },
+    {
+      "series": "runtime-06-extended/amsdu-on",
+      "test": "tcp-65507-down",
+      "records": [
+        {
+          "bad_payload": 0,
+          "bytes": 33539584,
+          "duplicates": 0,
+          "expected": 512,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 512,
+          "protocol": "tcp",
+          "seconds": 2.651601286
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 33539584,
+          "duplicates": 0,
+          "expected": 512,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 512,
+          "protocol": "tcp",
+          "seconds": 2.867396076
+        }
+      ]
+    },
+    {
+      "series": "runtime-06-extended/amsdu-on",
+      "test": "tcp-65507-up",
+      "records": [
+        {
+          "bad_payload": 0,
+          "bytes": 33539584,
+          "duplicates": 0,
+          "expected": 512,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 512,
+          "protocol": "tcp",
+          "seconds": 2.707052187
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 33539584,
+          "duplicates": 0,
+          "expected": 512,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 512,
+          "protocol": "tcp",
+          "seconds": 2.878983293
+        }
+      ]
+    },
+    {
+      "series": "runtime-06-extended/amsdu-on",
+      "test": "udp-1400-down",
+      "records": [
+        {
+          "bad_payload": 0,
+          "bytes": 70000000,
+          "duplicates": 0,
+          "expected": 50000,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 50000,
+          "protocol": "udp",
+          "seconds": 11.196563546
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 70000000,
+          "duplicates": 0,
+          "expected": 50000,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 50000,
+          "protocol": "udp",
+          "seconds": 11.205865362
+        }
+      ]
+    },
+    {
+      "series": "runtime-06-extended/amsdu-on",
+      "test": "udp-1400-up",
+      "records": [
+        {
+          "bad_payload": 0,
+          "bytes": 70000000,
+          "duplicates": 0,
+          "expected": 50000,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 50000,
+          "protocol": "udp",
+          "seconds": 11.197517764
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 70000000,
+          "duplicates": 0,
+          "expected": 50000,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 50000,
+          "protocol": "udp",
+          "seconds": 11.257609985
+        }
+      ]
+    },
+    {
+      "series": "runtime-06-extended/amsdu-on",
+      "test": "udp-65507-down",
+      "records": [
+        {
+          "bad_payload": 0,
+          "bytes": 8384896,
+          "duplicates": 0,
+          "expected": 128,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 128,
+          "protocol": "udp",
+          "seconds": 4.472750415
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 8384896,
+          "duplicates": 0,
+          "expected": 128,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 128,
+          "protocol": "udp",
+          "seconds": 4.450305407
+        }
+      ]
+    },
+    {
+      "series": "runtime-06-extended/amsdu-on",
+      "test": "udp-65507-up",
+      "records": [
+        {
+          "bad_payload": 0,
+          "bytes": 8384896,
+          "duplicates": 0,
+          "expected": 128,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 128,
+          "protocol": "udp",
+          "seconds": 4.472102173
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 8384896,
+          "duplicates": 0,
+          "expected": 128,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 128,
+          "protocol": "udp",
+          "seconds": 4.50225549
+        }
+      ]
+    },
+    {
+      "series": "runtime-07-2g/payload",
+      "test": "tcp-65507-down",
+      "records": [
+        {
+          "bad_payload": 0,
+          "bytes": 33539584,
+          "duplicates": 0,
+          "expected": 512,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 512,
+          "protocol": "tcp",
+          "seconds": 2.8677686270000002
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 33539584,
+          "duplicates": 0,
+          "expected": 512,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 512,
+          "protocol": "tcp",
+          "seconds": 3.118865832
+        }
+      ]
+    },
+    {
+      "series": "runtime-07-2g/payload",
+      "test": "tcp-65507-up",
+      "records": [
+        {
+          "bad_payload": 0,
+          "bytes": 33539584,
+          "duplicates": 0,
+          "expected": 512,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 512,
+          "protocol": "tcp",
+          "seconds": 3.8913691249999998
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 33539584,
+          "duplicates": 0,
+          "expected": 512,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 512,
+          "protocol": "tcp",
+          "seconds": 4.485130689
+        }
+      ]
+    },
+    {
+      "series": "runtime-07-2g/payload",
+      "test": "udp-1400-up",
+      "records": [
+        {
+          "bad_payload": 0,
+          "bytes": 28000000,
+          "duplicates": 0,
+          "expected": 20000,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 20000,
+          "protocol": "udp",
+          "seconds": 11.200457043
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 27998600,
+          "duplicates": 0,
+          "expected": 20000,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 19999,
+          "protocol": "udp",
+          "seconds": 14.24990874
+        }
+      ]
+    },
+    {
+      "series": "runtime-08-2g-control/0-0",
+      "test": "udp-1400-down",
+      "records": [
+        {
+          "bad_payload": 0,
+          "bytes": 28000000,
+          "duplicates": 0,
+          "expected": 20000,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 20000,
+          "protocol": "udp",
+          "seconds": 11.200664832
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 28000000,
+          "duplicates": 0,
+          "expected": 20000,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 20000,
+          "protocol": "udp",
+          "seconds": 11.194157988
+        }
+      ]
+    },
+    {
+      "series": "runtime-08-2g-control/0-0",
+      "test": "udp-1400-up",
+      "records": [
+        {
+          "bad_payload": 0,
+          "bytes": 28000000,
+          "duplicates": 0,
+          "expected": 20000,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 20000,
+          "protocol": "udp",
+          "seconds": 11.200451699
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 28000000,
+          "duplicates": 0,
+          "expected": 20000,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 20000,
+          "protocol": "udp",
+          "seconds": 11.253814846
+        }
+      ]
+    },
+    {
+      "series": "runtime-08-2g-control/0-0",
+      "test": "udp-65507-down",
+      "records": [
+        {
+          "bad_payload": 0,
+          "bytes": 8384896,
+          "duplicates": 0,
+          "expected": 128,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 128,
+          "protocol": "udp",
+          "seconds": 6.708782667
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 8384896,
+          "duplicates": 0,
+          "expected": 128,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 128,
+          "protocol": "udp",
+          "seconds": 6.668466429
+        }
+      ]
+    },
+    {
+      "series": "runtime-08-2g-control/0-0",
+      "test": "udp-65507-up",
+      "records": [
+        {
+          "bad_payload": 0,
+          "bytes": 8384896,
+          "duplicates": 0,
+          "expected": 128,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 128,
+          "protocol": "udp",
+          "seconds": 6.709055914
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 8384896,
+          "duplicates": 0,
+          "expected": 128,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 128,
+          "protocol": "udp",
+          "seconds": 6.71940783
+        }
+      ]
+    },
+    {
+      "series": "runtime-08-2g-control/1-192",
+      "test": "udp-1400-down",
+      "records": [
+        {
+          "bad_payload": 0,
+          "bytes": 28000000,
+          "duplicates": 0,
+          "expected": 20000,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 20000,
+          "protocol": "udp",
+          "seconds": 11.200892078
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 28000000,
+          "duplicates": 0,
+          "expected": 20000,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 20000,
+          "protocol": "udp",
+          "seconds": 11.212506097
+        }
+      ]
+    },
+    {
+      "series": "runtime-08-2g-control/1-192",
+      "test": "udp-1400-up",
+      "records": [
+        {
+          "bad_payload": 0,
+          "bytes": 28000000,
+          "duplicates": 0,
+          "expected": 20000,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 20000,
+          "protocol": "udp",
+          "seconds": 11.200167435000001
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 28000000,
+          "duplicates": 0,
+          "expected": 20000,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 20000,
+          "protocol": "udp",
+          "seconds": 11.258183098
+        }
+      ]
+    },
+    {
+      "series": "runtime-08-2g-control/1-192",
+      "test": "udp-65507-down",
+      "records": [
+        {
+          "bad_payload": 0,
+          "bytes": 8384896,
+          "duplicates": 0,
+          "expected": 128,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 128,
+          "protocol": "udp",
+          "seconds": 6.707935766
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 8384896,
+          "duplicates": 0,
+          "expected": 128,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 128,
+          "protocol": "udp",
+          "seconds": 6.66955867
+        }
+      ]
+    },
+    {
+      "series": "runtime-08-2g-control/1-192",
+      "test": "udp-65507-up",
+      "records": [
+        {
+          "bad_payload": 0,
+          "bytes": 8384896,
+          "duplicates": 0,
+          "expected": 128,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 128,
+          "protocol": "udp",
+          "seconds": 6.708965381
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 8319389,
+          "duplicates": 0,
+          "expected": 128,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 127,
+          "protocol": "udp",
+          "seconds": 9.725555413
+        }
+      ]
+    },
+    {
+      "series": "runtime-08-2g-control/2-192",
+      "test": "udp-1400-down",
+      "records": [
+        {
+          "bad_payload": 0,
+          "bytes": 28000000,
+          "duplicates": 0,
+          "expected": 20000,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 20000,
+          "protocol": "udp",
+          "seconds": 11.200306305
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 28000000,
+          "duplicates": 0,
+          "expected": 20000,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 20000,
+          "protocol": "udp",
+          "seconds": 11.193824994
+        }
+      ]
+    },
+    {
+      "series": "runtime-08-2g-control/2-192",
+      "test": "udp-1400-up",
+      "records": [
+        {
+          "bad_payload": 0,
+          "bytes": 28000000,
+          "duplicates": 0,
+          "expected": 20000,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 20000,
+          "protocol": "udp",
+          "seconds": 11.200578921
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 28000000,
+          "duplicates": 0,
+          "expected": 20000,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 20000,
+          "protocol": "udp",
+          "seconds": 11.243059985
+        }
+      ]
+    },
+    {
+      "series": "runtime-08-2g-control/2-192",
+      "test": "udp-65507-down",
+      "records": [
+        {
+          "bad_payload": 0,
+          "bytes": 8384896,
+          "duplicates": 0,
+          "expected": 128,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 128,
+          "protocol": "udp",
+          "seconds": 6.708637799
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 8384896,
+          "duplicates": 0,
+          "expected": 128,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 128,
+          "protocol": "udp",
+          "seconds": 6.668492864
+        }
+      ]
+    },
+    {
+      "series": "runtime-08-2g-control/2-192",
+      "test": "udp-65507-up",
+      "records": [
+        {
+          "bad_payload": 0,
+          "bytes": 8384896,
+          "duplicates": 0,
+          "expected": 128,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 128,
+          "protocol": "udp",
+          "seconds": 6.70833723
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 8384896,
+          "duplicates": 0,
+          "expected": 128,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 128,
+          "protocol": "udp",
+          "seconds": 6.724568532
+        }
+      ]
+    },
+    {
+      "series": "runtime-08-2g-control/3-0",
+      "test": "udp-1400-down",
+      "records": [
+        {
+          "bad_payload": 0,
+          "bytes": 28000000,
+          "duplicates": 0,
+          "expected": 20000,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 20000,
+          "protocol": "udp",
+          "seconds": 11.200916836
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 28000000,
+          "duplicates": 0,
+          "expected": 20000,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 20000,
+          "protocol": "udp",
+          "seconds": 11.282216461
+        }
+      ]
+    },
+    {
+      "series": "runtime-08-2g-control/3-0",
+      "test": "udp-1400-up",
+      "records": [
+        {
+          "bad_payload": 0,
+          "bytes": 28000000,
+          "duplicates": 0,
+          "expected": 20000,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 20000,
+          "protocol": "udp",
+          "seconds": 11.201091469
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 28000000,
+          "duplicates": 0,
+          "expected": 20000,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 20000,
+          "protocol": "udp",
+          "seconds": 11.24403982
+        }
+      ]
+    },
+    {
+      "series": "runtime-08-2g-control/3-0",
+      "test": "udp-65507-down",
+      "records": [
+        {
+          "bad_payload": 0,
+          "bytes": 8384896,
+          "duplicates": 0,
+          "expected": 128,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 128,
+          "protocol": "udp",
+          "seconds": 6.708409117
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 8384896,
+          "duplicates": 0,
+          "expected": 128,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 128,
+          "protocol": "udp",
+          "seconds": 6.668990882
+        }
+      ]
+    },
+    {
+      "series": "runtime-08-2g-control/3-0",
+      "test": "udp-65507-up",
+      "records": [
+        {
+          "bad_payload": 0,
+          "bytes": 8384896,
+          "duplicates": 0,
+          "expected": 128,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 128,
+          "protocol": "udp",
+          "seconds": 6.708928159
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 8384896,
+          "duplicates": 0,
+          "expected": 128,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 128,
+          "protocol": "udp",
+          "seconds": 6.719590124
+        }
+      ]
+    }
+  ],
+  "checksums": {
+    "tcp_packets": 10000,
+    "bad_ip": 0,
+    "bad_tcp": 0,
+    "truncated": 0
+  },
+  "capture_localization": [
+    {
+      "series": "0-1400",
+      "comparison": {
+        "size": 1400,
+        "count": 100000,
+        "router_frames": 99998,
+        "host_frames": 99998,
+        "missing_after_wl": 0,
+        "extra_at_host": 0,
+        "capture_stats": {
+          "router": {
+            "captured": 99998,
+            "socket_packets": 99998,
+            "socket_drops": 0
+          },
+          "host": {
+            "captured": 99998,
+            "socket_packets": 99998,
+            "socket_drops": 0
+          }
+        }
+      },
+      "payload": [
+        {
+          "bad_payload": 0,
+          "bytes": 140000000,
+          "duplicates": 0,
+          "expected": 100000,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 100000,
+          "protocol": "udp",
+          "seconds": 56.000473652
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 139997200,
+          "duplicates": 0,
+          "expected": 100000,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 99998,
+          "protocol": "udp",
+          "seconds": 59.044623382
+        }
+      ]
+    },
+    {
+      "series": "0-65507",
+      "comparison": {
+        "size": 65507,
+        "count": 1024,
+        "router_frames": 46080,
+        "host_frames": 46080,
+        "missing_after_wl": 0,
+        "extra_at_host": 0,
+        "capture_stats": {
+          "router": {
+            "captured": 46080,
+            "socket_packets": 46080,
+            "socket_drops": 0
+          },
+          "host": {
+            "captured": 46080,
+            "socket_packets": 46080,
+            "socket_drops": 0
+          }
+        }
+      },
+      "payload": [
+        {
+          "bad_payload": 0,
+          "bytes": 67079168,
+          "duplicates": 0,
+          "expected": 1024,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 1024,
+          "protocol": "udp",
+          "seconds": 53.664049557
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 67079168,
+          "duplicates": 0,
+          "expected": 1024,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 1024,
+          "protocol": "udp",
+          "seconds": 53.679021096
+        }
+      ]
+    },
+    {
+      "series": "192-1400",
+      "comparison": {
+        "size": 1400,
+        "count": 100000,
+        "router_frames": 99993,
+        "host_frames": 99993,
+        "missing_after_wl": 0,
+        "extra_at_host": 0,
+        "capture_stats": {
+          "router": {
+            "captured": 99993,
+            "socket_packets": 99993,
+            "socket_drops": 0
+          },
+          "host": {
+            "captured": 99993,
+            "socket_packets": 99993,
+            "socket_drops": 0
+          }
+        }
+      },
+      "payload": [
+        {
+          "bad_payload": 0,
+          "bytes": 140000000,
+          "duplicates": 0,
+          "expected": 100000,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 100000,
+          "protocol": "udp",
+          "seconds": 56.000491756
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 139990200,
+          "duplicates": 0,
+          "expected": 100000,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 99993,
+          "protocol": "udp",
+          "seconds": 59.046619721
+        }
+      ]
+    },
+    {
+      "series": "192-65507",
+      "comparison": {
+        "size": 65507,
+        "count": 1024,
+        "router_frames": 46080,
+        "host_frames": 46080,
+        "missing_after_wl": 0,
+        "extra_at_host": 0,
+        "capture_stats": {
+          "router": {
+            "captured": 46080,
+            "socket_packets": 46080,
+            "socket_drops": 0
+          },
+          "host": {
+            "captured": 46080,
+            "socket_packets": 46080,
+            "socket_drops": 0
+          }
+        }
+      },
+      "payload": [
+        {
+          "bad_payload": 0,
+          "bytes": 67079168,
+          "duplicates": 0,
+          "expected": 1024,
+          "mode": "send",
+          "out_of_order": 0,
+          "packets": 1024,
+          "protocol": "udp",
+          "seconds": 53.663593726
+        },
+        {
+          "bad_payload": 0,
+          "bytes": 67079168,
+          "duplicates": 0,
+          "expected": 1024,
+          "mode": "recv",
+          "out_of_order": 0,
+          "packets": 1024,
+          "protocol": "udp",
+          "seconds": 53.690126813
+        }
+      ]
+    }
+  ],
+  "patched_kernel_sha256": "51571182ad5536174ca6ee7c695cf0902cccd1700a71e379601031f1f618ad91"
+}
