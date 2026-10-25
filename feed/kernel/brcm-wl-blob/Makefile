@@ -17,7 +17,7 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=brcm-wl-blob
-PKG_RELEASE:=3
+PKG_RELEASE:=4
 PKG_LICENSE:=Proprietary
 PKG_BUILD_DIR:=$(KERNEL_BUILD_DIR)/$(PKG_NAME)
 
@@ -63,6 +63,9 @@ define Build/Prepare
 	$(CP) ./src/. $(PKG_BUILD_DIR)/
 ifeq ($(WLBLOB_VARIANT),ft)
 	$(call Build/Prepare/blob,$(DL_DIR)/$(PKG_SOURCE),wlc_blob_ft.o,./tools/profile-freshtomato-6.37.14.126.py)
+	python3 -I ./tools/wrap-blob.py $(PKG_BUILD_DIR)/wlc_blob_ft.o $(PKG_BUILD_DIR)/blob.wrapped.o \
+		wlc_prep_sdu wlc_prep_sdu_fast > $(PKG_BUILD_DIR)/wrap.log
+	mv $(PKG_BUILD_DIR)/blob.wrapped.o $(PKG_BUILD_DIR)/wlc_blob_ft.o
 else
 	@[ -f "$(WLBLOB_DLINK_KO)" ] || { echo "WLBLOB_VARIANT=dlink needs WLBLOB_DLINK_KO=<path to wl_ap.ko from the 2.03B01 firmware>" >&2; exit 1; }
 	$(call Build/Prepare/blob,$(WLBLOB_DLINK_KO),wlc_blob.o,)

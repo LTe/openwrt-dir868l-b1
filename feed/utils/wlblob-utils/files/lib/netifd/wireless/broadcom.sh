@@ -13,6 +13,7 @@ init_wireless_driver "$@"
 drv_broadcom_init_device_config() {
 	config_add_string ifname country macaddr
 	config_add_int txpower frameburst distance
+	config_add_boolean amsdu
 }
 
 drv_broadcom_cleanup() { :; }
@@ -203,7 +204,7 @@ wlblob_setup_sta() {
 
 drv_broadcom_setup() {
 	json_select config
-	json_get_vars ifname channel band htmode country txpower frameburst:1 distance macaddr
+	json_get_vars ifname channel band htmode country txpower frameburst:1 distance macaddr amsdu
 	local cfg_band="$band"
 	_wdev_prepare_channel
 	json_select ..
@@ -231,6 +232,7 @@ drv_broadcom_setup() {
 	[ "$band" = 2g ] && wlblob_wl bw_cap 2g $([ "$htmode" = HT40 ] && echo 3 || echo 1)
 	wlblob_wl chanspec "$(wlblob_chanspec "$channel" "$htmode" "$band")"
 	wlblob_wl frameburst "$frameburst"
+	[ -n "$amsdu" ] && wlblob_wl amsdu "$amsdu"
 	[ -n "$txpower" ] && wlblob_wl txpwr1 -d "$txpower"
 
 	# MBSS mode must be chosen while the radio is down

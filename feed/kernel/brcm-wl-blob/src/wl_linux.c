@@ -150,7 +150,19 @@ module_param(ioctl_debug, int, 0644);
 MODULE_PARM_DESC(ioctl_debug, "log every wl ioctl (cmd, len, caller)");
 /* Opt in while UDP socket-buffer pressure under batched delivery is evaluated. */
 static bool rx_gro;
-static bool tx_batch;
+/* These defaults were validated with the FreshTomato ABI/core. */
+#ifdef WLSKB_LAYOUT_FT
+#define WL_FAST_DEFAULT true
+#else
+#define WL_FAST_DEFAULT false
+#endif
+static bool rx_tcp_gro = WL_FAST_DEFAULT;
+module_param(rx_tcp_gro, bool, 0644);
+MODULE_PARM_DESC(rx_tcp_gro, "send plain TCP to GRO; keep other traffic on the batch path");
+static unsigned int rx_tcp_gro_packets, rx_tcp_gro_bypass;
+module_param(rx_tcp_gro_packets, uint, 0400);
+module_param(rx_tcp_gro_bypass, uint, 0400);
+static bool tx_batch = WL_FAST_DEFAULT;
 module_param(tx_batch, bool, 0644);
 MODULE_PARM_DESC(tx_batch, "experimental same-flow TCP batching using netdev_xmit_more");
 static atomic_t tx_batch_packets = ATOMIC_INIT(0);
@@ -162,7 +174,7 @@ static int tx_batch_stats_get(char *buf, const struct kernel_param *kp)
 }
 static const struct kernel_param_ops tx_batch_stats_ops = { .get = tx_batch_stats_get };
 module_param_cb(tx_batch_stats, &tx_batch_stats_ops, NULL, 0400);
-static bool rx_batch;
+static bool rx_batch = WL_FAST_DEFAULT;
 module_param(rx_batch, bool, 0644);
 MODULE_PARM_DESC(rx_batch, "deliver DPC receive packets as a list after unlocking");
 module_param(rx_gro, bool, 0644);
@@ -365,16 +377,79 @@ static void wl_tx_flush(wl_if_t *wlif)
 	wlc_sendpkt(wlif->wl->wlc, head, wlif->wlcif);
 }
 
+/* Diagnostic counters on the single-core test router. Reasons may overlap. */
+static unsigned int tx_seen, tx_forward, tx_copy, tx_copy_bytes;
+static unsigned int tx_copy_headroom, tx_copy_cloned, tx_copy_nonlinear;
+static unsigned int tx_headroom_under64, tx_headroom_under256, tx_shared;
+static bool tx_expand = WL_FAST_DEFAULT;
+static unsigned int tx_expand_min_len = 256;
+static unsigned int tx_expanded, tx_expand_failed, tx_orphaned;
+module_param(tx_expand, bool, 0644);
+MODULE_PARM_DESC(tx_expand, "reuse private linear skb structures when growing TX headroom");
+module_param(tx_expand_min_len, uint, 0644);
+MODULE_PARM_DESC(tx_expand_min_len, "minimum packet length for TX buffer expansion");
+module_param(tx_expanded, uint, 0400);
+module_param(tx_expand_failed, uint, 0400);
+module_param(tx_orphaned, uint, 0400);
+module_param(tx_seen, uint, 0400);
+module_param(tx_forward, uint, 0400);
+module_param(tx_copy, uint, 0400);
+module_param(tx_copy_bytes, uint, 0400);
+module_param(tx_copy_headroom, uint, 0400);
+module_param(tx_copy_cloned, uint, 0400);
+module_param(tx_copy_nonlinear, uint, 0400);
+module_param(tx_headroom_under64, uint, 0400);
+module_param(tx_headroom_under256, uint, 0400);
+module_param(tx_shared, uint, 0400);
+
+static void wl_tx_orphan(struct sk_buff *skb)
+{
+	/* Linux 2.6.36 orphaned TX skbs before calling this legacy core. Its
+	 * A-MSDU/PKTC queues can otherwise retain socket ownership long enough
+	 * to stall TCP small queues, including packets needing no head growth.
+	 */
+	tx_orphaned += skb->sk != NULL;
+	skb_orphan(skb);
+}
+
 static netdev_tx_t wl_start(struct sk_buff *skb, struct net_device *dev)
 {
 	wl_if_t *wlif = WL_DEV_IF(dev);
 	wl_info_t *wl = wlif->wl;
 	void *pkt;
 
-	if (skb_headroom(skb) < dev->needed_headroom || skb_cloned(skb) || skb_is_nonlinear(skb)) {
-		struct sk_buff *nskb = skb_copy_expand(skb, dev->needed_headroom,
-						    dev->needed_tailroom, GFP_ATOMIC);
-		dev_kfree_skb_any(skb);
+	tx_seen++;
+	tx_forward += skb->skb_iif != 0;
+	tx_headroom_under64 += skb_headroom(skb) < 64;
+	tx_headroom_under256 += skb_headroom(skb) < 256;
+	tx_shared += skb_shared(skb);
+	if (skb_headroom(skb) < dev->needed_headroom || skb_cloned(skb) ||
+	    skb_is_nonlinear(skb) || skb_shared(skb)) {
+		struct sk_buff *nskb;
+		tx_copy++;
+		tx_copy_bytes += skb->len;
+		tx_copy_headroom += skb_headroom(skb) < dev->needed_headroom;
+		tx_copy_cloned += skb_cloned(skb);
+		tx_copy_nonlinear += skb_is_nonlinear(skb);
+		if (READ_ONCE(tx_expand) && skb->len >= READ_ONCE(tx_expand_min_len) &&
+		    !skb_shared(skb) && !skb_is_nonlinear(skb)) {
+			int head = max_t(int, dev->needed_headroom - skb_headroom(skb), 0);
+			int tail = max_t(int, dev->needed_tailroom - skb_tailroom(skb), 0);
+			/* Unshare data and adjust checksum/header offsets in the kernel. */
+			wl_tx_orphan(skb);
+			if (!pskb_expand_head(skb, head, tail, GFP_ATOMIC)) {
+				nskb = skb;
+				tx_expanded++;
+			} else {
+				nskb = NULL;
+				tx_expand_failed++;
+				dev_kfree_skb_any(skb);
+			}
+		} else {
+			nskb = skb_copy_expand(skb, dev->needed_headroom,
+						dev->needed_tailroom, GFP_ATOMIC);
+			dev_kfree_skb_any(skb);
+		}
 		if (!nskb) {
 			dev->stats.tx_dropped++;
 			WL_LOCK(wl);
@@ -384,6 +459,8 @@ static netdev_tx_t wl_start(struct sk_buff *skb, struct net_device *dev)
 		}
 		skb = nskb;
 	}
+	/* The skb structure is private here, even if the original was shared. */
+	wl_tx_orphan(skb);
 	skb->next = NULL;
 	dev->stats.tx_packets++;
 	dev->stats.tx_bytes += skb->len;
@@ -506,10 +583,12 @@ done:
 	return bcmerror;
 }
 
+#include "wl_cso.h"
 static const struct net_device_ops wl_netdev_ops = {
 	.ndo_open = wl_open,
 	.ndo_stop = wl_close,
 	.ndo_start_xmit = wl_start,
+	.ndo_features_check = wl_cso_features_check,
 	.ndo_set_mac_address = wl_set_mac_address,
 	.ndo_set_rx_mode = wl_set_rx_mode,
 	.ndo_siocdevprivate = wl_siocdevprivate,
@@ -527,6 +606,10 @@ static int wl_register_if(wl_info_t *wl, wl_if_t *wlif, const u8 *addr)
 	eth_hw_addr_set(dev, addr);
 	SET_NETDEV_DEV(dev, &wl->pdev->dev);
 	dev->features |= NETIF_F_GRO;
+	if (cso_offload && wl->pdev->device == 0x4360) {
+		dev->features |= NETIF_F_HW_CSUM;
+		dev->hw_features |= NETIF_F_HW_CSUM;
+	}
 	err = gro_cells_init(&wlif->gro_cells, dev);
 	if (err)
 		return err;
@@ -702,6 +785,53 @@ void wl_set_monitor(wl_info_t *wl, int val)
 {
 }
 
+/* GRO still validates TCP checksums. This is only a delivery-path selector;
+ * fragments, IPv6 extensions and other protocols retain normal batch delivery.
+ */
+bool wl_rx_tcp_gro_eligible(const struct sk_buff *skb)
+{
+	const u8 *d = skb->data;
+	unsigned int len = skb_headlen(skb);
+	if (skb->protocol == htons(ETH_P_IP))
+		return len >= 40 && d[0] == 0x45 && d[9] == IPPROTO_TCP &&
+			!(d[6] & 0x3f) && !d[7];
+	if (skb->protocol == htons(ETH_P_IPV6))
+		return len >= 60 && (d[0] >> 4) == 6 && d[6] == IPPROTO_TCP;
+	return false;
+}
+
+static bool rx_tcp_gro_local_data = WL_FAST_DEFAULT;
+static unsigned int rx_tcp_gro_forward_bypass;
+module_param(rx_tcp_gro_local_data, bool, 0644);
+MODULE_PARM_DESC(rx_tcp_gro_local_data, "bypass TCP data GRO when forwarding to another bridge host");
+module_param(rx_tcp_gro_forward_bypass, uint, 0400);
+
+/* For an eligible TCP packet, avoid aggregating forwarded data only to split
+ * it again at the wired egress. Keep the existing ACK delivery path. Addresses
+ * of this interface or its master identify locally addressed/routed traffic.
+ */
+static bool wl_gro_forwarded_data(const struct sk_buff *skb,
+				struct net_device *dev)
+{
+	const u8 *ip = skb->data;
+	unsigned int iphlen = skb->protocol == htons(ETH_P_IP) ? 20 : 40;
+	unsigned int iplen, tcphlen = (ip[iphlen + 12] >> 4) * 4;
+	const u8 *dest = eth_hdr(skb)->h_dest;
+	struct net_device *master;
+	bool local;
+	iplen = skb->protocol == htons(ETH_P_IP) ?
+		((ip[2] << 8) | ip[3]) : 40 + ((ip[4] << 8) | ip[5]);
+	if (iplen <= iphlen + tcphlen)
+		return false;
+	if (ether_addr_equal(dest, dev->dev_addr))
+		return false;
+	rcu_read_lock();
+	master = netdev_master_upper_dev_get_rcu(dev);
+	local = master && ether_addr_equal(dest, master->dev_addr);
+	rcu_read_unlock();
+	return !local;
+}
+
 /* rx: hand (possibly chained) packets to the stack */
 void wl_sendup(wl_info_t *wl, wl_if_t *wlif, void *p, int numpkt)
 {
@@ -714,6 +844,7 @@ void wl_sendup(wl_info_t *wl, wl_if_t *wlif, void *p, int numpkt)
 	while (p) {
 		void *next = PKTISCHAINED(p) ? PKTCLINK(p) : NULL;
 		struct sk_buff *skb;
+		bool use_gro;
 
 		PKTCLRCHAINED(wl->osh, p);
 		PKTSETCLINK(p, NULL);
@@ -727,7 +858,20 @@ void wl_sendup(wl_info_t *wl, wl_if_t *wlif, void *p, int numpkt)
 		 * released, so a reply through wl_start() cannot re-enter the lock.
 		 * Each netdev has its own cells, keeping virtual interfaces separate.
 		 */
-		if (READ_ONCE(rx_gro))
+		use_gro = READ_ONCE(rx_gro);
+		if (!use_gro && READ_ONCE(rx_tcp_gro)) {
+			use_gro = wl_rx_tcp_gro_eligible(skb);
+			if (use_gro && READ_ONCE(rx_tcp_gro_local_data) &&
+			    wl_gro_forwarded_data(skb, dev)) {
+				use_gro = false;
+				rx_tcp_gro_forward_bypass++;
+			}
+			if (use_gro)
+				rx_tcp_gro_packets++;
+			else
+				rx_tcp_gro_bypass++;
+		}
+		if (use_gro)
 			gro_cells_receive(&WL_DEV_IF(dev)->gro_cells, skb);
 		else if (wl->rx_batch)
 			list_add_tail(&skb->list, wl->rx_batch);

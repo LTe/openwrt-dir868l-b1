@@ -15,19 +15,33 @@ tree at a pinned commit and verified by sha256.
 
 ## Performance
 
-Measured on OpenWrt r37659 / Linux 6.18.55 with a GL-MT6000 client about two metres away.
-TCP `iperf3`, 15 seconds per test, one band active at a time; the server runs on the DIR-868L.
+Measured on 2026-10-25 with the **v0.3.1 driver package**, OpenWrt r37659 / Linux 6.18.55,
+and a GL-MT6000 client about two metres away. Each value is the mean of two 12-second TCP
+`iperf3` runs, with one band tested at a time and the server on the DIR-868L. Default packet
+optimizations are enabled; TX A-MSDU is off and A-MPDU is on.
 
 | Band | Mode | TCP streams | Client → router | Router → client |
 |---|---|---:|---:|---:|
-| 5 GHz | VHT80, channel 36 | 1 | 284 Mbit/s | 216 Mbit/s |
-| 5 GHz | VHT80, channel 36 | 4 | 308 Mbit/s | 229 Mbit/s |
-| 2.4 GHz | HT20, channel 1 | 1 | 54 Mbit/s | 103 Mbit/s |
-| 2.4 GHz | HT20, channel 1 | 4 | 51 Mbit/s | 112 Mbit/s |
+| 5 GHz | VHT80, channel 36 | 1 | 321 Mbit/s | 256 Mbit/s |
+| 5 GHz | VHT80, channel 36 | 4 | 341 Mbit/s | 258 Mbit/s |
+| 2.4 GHz | HT20, channel 1 | 1 | 53 Mbit/s | 109 Mbit/s |
+| 2.4 GHz | HT20, channel 1 | 4 | 60 Mbit/s | 107 Mbit/s |
 
-These are direct Wi-Fi endpoint measurements, not bridge or NAT throughput. Results depend
-on the client and radio conditions. Test details and separate experimental results are in
-[Performance and driver research](docs/PERFORMANCE.md).
+Router CPU at a fixed offered rate, comparing the packet-processing options off/on
+in the same package (two 12-second runs per setting, off/on/on/off):
+
+| Traffic path | Offered rate | CPU, options off | CPU, options on |
+|---|---:|---:|---:|
+| Wi-Fi → router | 200 Mbit/s | 67.4% | 60.8% |
+| Router → Wi-Fi | 150 Mbit/s | 62.4% | 59.7% |
+| Wi-Fi → Ethernet bridge | 80 Mbit/s | 36.4% | 37.1% |
+| Ethernet → Wi-Fi bridge | 80 Mbit/s | 60.1% | 56.3% |
+
+The throughput table measures direct Wi-Fi endpoints; the bridge rows measure CPU at
+80 Mbit/s below the wired path's 100 Mbit/s bottleneck. NAT was not measured. Results depend
+on the client and radio conditions. Test details, retransmissions and UDP observations are
+in the [v0.3.1 validation report](docs/releases/v0.3.1-validation.md); earlier measurements
+and experiments are in [Performance and driver research](docs/PERFORMANCE.md).
 
 ## Download and install
 
@@ -114,6 +128,16 @@ The radios appear as ordinary `/etc/config/wireless` devices of type `broadcom` 
 `wl1` = 5 GHz), created by `wifi config`.  Supported: `mode ap` (several per radio), `mode sta`,
 `encryption none|psk|psk2|psk-mixed`, `channel`, `htmode` (HT20/40, VHT20/40/80), `hidden`,
 `isolate`, `maxassoc`, `txpower`, `country`.  Not supported: WPA3, 802.11r, mesh, monitor.
+
+Starting with v0.3.1, the FreshTomato driver enables supported IPv4 TCP checksum offload,
+selective TCP GRO, RX/TX batching and TX buffer reuse by default. The optional per-radio
+`amsdu` setting controls TX A-MSDU. To use the 5 GHz aggregation setting from the table:
+
+```sh
+uci set wireless.wlblob1.amsdu='0'
+uci commit wireless
+wifi reload
+```
 
 Under the hood: `kmod-brcm-wl-blob` exposes `wlN` netdevs and an emulated `/dev/nvram`;
 `/lib/netifd/wireless/broadcom.sh` configures the radio through `wl` and writes the `wlN_*` nvram

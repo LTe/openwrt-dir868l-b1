@@ -23,6 +23,8 @@ extern void wl_selftest_free_wl(struct wl_info *wl);
 extern bool wlblob_amsdu_pool_test_enabled(void);
 
 static int st_fail;
+extern bool wl_rx_tcp_gro_eligible(const struct sk_buff *skb);
+#include "wl_cso.h"
 #define CHECK(cond, fmt, ...) do { if (!(cond)) { st_fail++; printk(KERN_ERR "wl selftest FAIL: " fmt "\n", ##__VA_ARGS__); } } while (0)
 
 static int timer_hits;
@@ -40,6 +42,26 @@ int wl_selftest(struct pci_dev *pdev)
 	int i;
 
 	st_fail = 0;
+	CHECK(wl_cso_selftest() == 0, "checksum offload");
+	skb = alloc_skb(128, GFP_KERNEL);
+	CHECK(skb != NULL, "TCP GRO selector allocation");
+	if (skb) {
+		d = skb_put_zero(skb, 64);
+		skb->protocol = htons(ETH_P_IP);
+		d[0] = 0x45; d[9] = IPPROTO_TCP;
+		CHECK(wl_rx_tcp_gro_eligible(skb), "IPv4 TCP GRO");
+		d[9] = IPPROTO_UDP;
+		CHECK(!wl_rx_tcp_gro_eligible(skb), "UDP must bypass GRO cells");
+		d[9] = IPPROTO_TCP; d[6] = 0x20;
+		CHECK(!wl_rx_tcp_gro_eligible(skb), "IP fragments must bypass GRO cells");
+		skb->protocol = htons(ETH_P_IPV6); d[0] = 0x60; d[6] = IPPROTO_TCP;
+		CHECK(wl_rx_tcp_gro_eligible(skb), "IPv6 TCP GRO");
+		d[6] = 0;
+		CHECK(!wl_rx_tcp_gro_eligible(skb), "IPv6 extension fallback");
+		d[6] = IPPROTO_TCP; skb_trim(skb, 10);
+		CHECK(!wl_rx_tcp_gro_eligible(skb), "truncated packet fallback");
+		kfree_skb(skb);
+	}
 	osh = osl_attach(pdev, PCI_BUS, TRUE);
 	CHECK(osh != NULL, "osl_attach");
 	if (!osh)

@@ -2,6 +2,34 @@
 
 Development measurements and experimental findings, kept separately from the user guide.
 
+## Integration status
+
+Current package validation is recorded in the [v0.3.1 report](releases/v0.3.1-validation.md).
+
+The v0.3.1 package integrates the later checksum, selective TCP GRO and TX buffer
+experiments described below. On the default FreshTomato core, `cso_offload`,
+`cso_stack`, `rx_batch`, `tx_batch`, `rx_tcp_gro`, `rx_tcp_gro_local_data` and
+`tx_expand` default to enabled; `tx_expand_min_len` defaults to 256 bytes.
+The all-protocol `rx_gro` and `amsdu_pool` options remain disabled. Hardware
+checksums apply to supported BCM4360 IPv4 TCP packets; other traffic uses software.
+Neither TSO nor the BGMAC headroom experiment is included.
+
+Release integration also exposed a short-stream boundary missed by the earlier
+bulk tests: with A-MSDU and the packet optimizations enabled, an 8-byte-record TCP
+transfer could stall after delivering only part of its data. Captured packets
+had valid checksums. The legacy Linux 2.6.36 transmit path orphaned socket-owned
+skbs before invoking the driver; the modern port now explicitly restores that
+ownership release before the core's aggregation queues. Shared skb structures
+are copied first, and private buffers are orphaned before headroom expansion.
+Consequently the earlier experiment's claim that expansion preserves socket
+ownership describes the prototype, not the integrated implementation.
+
+The sections below are a chronological research record: statements that a feature
+was isolated or disabled by default describe its state at the time of that test.
+They do not override the v0.3.1 defaults listed above. The old 284/216 and 308/229
+Mbit/s measurements are baseline results, not measurements of the new package.
+
+## Earlier baseline measurements
 
 Measured on 2026-10-25 with the OpenWrt r37659 (kernel 6.18.55) image, both radios as APs, a
 GL-MT6000 as the client about two metres away, `iperf3` server running on the DIR-868L itself

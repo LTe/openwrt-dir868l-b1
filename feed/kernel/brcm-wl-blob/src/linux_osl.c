@@ -15,6 +15,7 @@
 #include <linux/netdevice.h>
 #include <linux/etherdevice.h>
 #include <pcicfg.h>
+#include "wl_cso.h"
 
 #define OS_HANDLE_MAGIC		0x1234abcd
 #ifdef WLSKB_LAYOUT_FT
@@ -569,6 +570,8 @@ uint osl_dma_map(osl_t *osh, void *va, uint size, int direction, void *p, hnddma
 {
 	int dir = (direction == DMA_TX) ? DMA_TO_DEVICE : DMA_FROM_DEVICE;
 	dma_addr_t pa;
+	if (direction == DMA_TX && osh->pdev->device == 0x4360)
+		wl_cso_dma(va, size, p);
 
 	if (osl_coh_lookup_va(osh, va, &pa))
 		return pa;	/* uncached coherent memory: nothing to flush, just translate */

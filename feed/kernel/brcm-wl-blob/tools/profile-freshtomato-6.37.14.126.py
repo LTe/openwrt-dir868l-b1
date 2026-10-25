@@ -2,7 +2,7 @@
 # glue = wl_linux.c code: one cluster in .text, the fast-path cluster, and the module init/exit/probe sections.
 {
  "GLUE": {
-    ".text": [(0x129ac0, 0x12cf10)],
+    ".text": [(0x129ac0, 0x12cf10), (0x1d1efc, 0x1d1f54)],
     ".text.fastpath": [(0x165c, 0x2158)],
     ".init.text": [(0, 0x244)], ".exit.text": [(0, 0xc)],
     ".devinit.text": [(0, 0xf4)], ".devexit.text": [(0, 0xdc)],

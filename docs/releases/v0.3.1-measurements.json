@@ -1,0 +1,651 @@
+{
+  "throughput_2g": [
+    {
+      "index": 0,
+      "enabled": 1,
+      "streams": 1,
+      "direction": "up",
+      "mbps": 51.646692843458915,
+      "retransmits": 0,
+      "cpu": 43.960558751027115,
+      "counters": {
+        "cso_hw": 0,
+        "cso_sw": 0,
+        "cso_invalid": 0,
+        "tx_copy": 95,
+        "tx_expanded": 4,
+        "tx_expand_failed": 0,
+        "rx_tcp_gro_packets": 53731,
+        "rx_tcp_gro_forward_bypass": 0
+      }
+    },
+    {
+      "index": 0,
+      "enabled": 1,
+      "streams": 1,
+      "direction": "down",
+      "mbps": 109.74099567130949,
+      "retransmits": 4,
+      "cpu": 44.644317252657395,
+      "counters": {
+        "cso_hw": 0,
+        "cso_sw": 0,
+        "cso_invalid": 0,
+        "tx_copy": 36,
+        "tx_expanded": 2,
+        "tx_expand_failed": 0,
+        "rx_tcp_gro_packets": 52018,
+        "rx_tcp_gro_forward_bypass": 0
+      }
+    },
+    {
+      "index": 1,
+      "enabled": 1,
+      "streams": 1,
+      "direction": "up",
+      "mbps": 55.29092190714638,
+      "retransmits": 1,
+      "cpu": 43.54971240755957,
+      "counters": {
+        "cso_hw": 0,
+        "cso_sw": 0,
+        "cso_invalid": 0,
+        "tx_copy": 66,
+        "tx_expanded": 0,
+        "tx_expand_failed": 0,
+        "rx_tcp_gro_packets": 57535,
+        "rx_tcp_gro_forward_bypass": 0
+      }
+    },
+    {
+      "index": 1,
+      "enabled": 1,
+      "streams": 1,
+      "direction": "down",
+      "mbps": 107.99375255394023,
+      "retransmits": 6,
+      "cpu": 44.006568144499184,
+      "counters": {
+        "cso_hw": 0,
+        "cso_sw": 0,
+        "cso_invalid": 0,
+        "tx_copy": 54,
+        "tx_expanded": 0,
+        "tx_expand_failed": 0,
+        "rx_tcp_gro_packets": 50882,
+        "rx_tcp_gro_forward_bypass": 0
+      }
+    },
+    {
+      "index": 0,
+      "enabled": 1,
+      "streams": 4,
+      "direction": "up",
+      "mbps": 58.97606192451197,
+      "retransmits": 4,
+      "cpu": 51.87908496732025,
+      "counters": {
+        "cso_hw": 0,
+        "cso_sw": 0,
+        "cso_invalid": 0,
+        "tx_copy": 128,
+        "tx_expanded": 38,
+        "tx_expand_failed": 0,
+        "rx_tcp_gro_packets": 61755,
+        "rx_tcp_gro_forward_bypass": 0
+      }
+    },
+    {
+      "index": 0,
+      "enabled": 1,
+      "streams": 4,
+      "direction": "down",
+      "mbps": 106.59573076365115,
+      "retransmits": 1219,
+      "cpu": 49.19614147909967,
+      "counters": {
+        "cso_hw": 0,
+        "cso_sw": 0,
+        "cso_invalid": 0,
+        "tx_copy": 84,
+        "tx_expanded": 6,
+        "tx_expand_failed": 0,
+        "rx_tcp_gro_packets": 52630,
+        "rx_tcp_gro_forward_bypass": 0
+      }
+    },
+    {
+      "index": 1,
+      "enabled": 1,
+      "streams": 4,
+      "direction": "up",
+      "mbps": 60.70960292261017,
+      "retransmits": 2,
+      "cpu": 46.852003270645945,
+      "counters": {
+        "cso_hw": 0,
+        "cso_sw": 0,
+        "cso_invalid": 0,
+        "tx_copy": 52,
+        "tx_expanded": 0,
+        "tx_expand_failed": 0,
+        "rx_tcp_gro_packets": 63542,
+        "rx_tcp_gro_forward_bypass": 0
+      }
+    },
+    {
+      "index": 1,
+      "enabled": 1,
+      "streams": 4,
+      "direction": "down",
+      "mbps": 107.55681292471205,
+      "retransmits": 460,
+      "cpu": 52.96506904955321,
+      "counters": {
+        "cso_hw": 0,
+        "cso_sw": 0,
+        "cso_invalid": 0,
+        "tx_copy": 138,
+        "tx_expanded": 64,
+        "tx_expand_failed": 0,
+        "rx_tcp_gro_packets": 54009,
+        "rx_tcp_gro_forward_bypass": 0
+      }
+    }
+  ],
+  "throughput_5g": [
+    {
+      "index": 0,
+      "enabled": 1,
+      "streams": 1,
+      "direction": "up",
+      "mbps": 315.01865442317404,
+      "retransmits": 3,
+      "cpu": 90.11532125205932,
+      "counters": {
+        "cso_hw": 3072,
+        "cso_sw": 30,
+        "cso_invalid": 0,
+        "tx_copy": 100,
+        "tx_expanded": 6,
+        "tx_expand_failed": 0,
+        "rx_tcp_gro_packets": 327611,
+        "rx_tcp_gro_forward_bypass": 0
+      }
+    },
+    {
+      "index": 0,
+      "enabled": 1,
+      "streams": 1,
+      "direction": "down",
+      "mbps": 256.7031684804473,
+      "retransmits": 0,
+      "cpu": 99.01153212520593,
+      "counters": {
+        "cso_hw": 266430,
+        "cso_sw": 955,
+        "cso_invalid": 0,
+        "tx_copy": 198,
+        "tx_expanded": 112,
+        "tx_expand_failed": 0,
+        "rx_tcp_gro_packets": 90875,
+        "rx_tcp_gro_forward_bypass": 0
+      }
+    },
+    {
+      "index": 1,
+      "enabled": 1,
+      "streams": 1,
+      "direction": "up",
+      "mbps": 326.7569302279179,
+      "retransmits": 1,
+      "cpu": 93.65210222588624,
+      "counters": {
+        "cso_hw": 3422,
+        "cso_sw": 27,
+        "cso_invalid": 0,
+        "tx_copy": 78,
+        "tx_expanded": 4,
+        "tx_expand_failed": 0,
+        "rx_tcp_gro_packets": 339820,
+        "rx_tcp_gro_forward_bypass": 0
+      }
+    },
+    {
+      "index": 1,
+      "enabled": 1,
+      "streams": 1,
+      "direction": "down",
+      "mbps": 256.1793334174925,
+      "retransmits": 0,
+      "cpu": 99.34047815333884,
+      "counters": {
+        "cso_hw": 266011,
+        "cso_sw": 825,
+        "cso_invalid": 0,
+        "tx_copy": 30,
+        "tx_expanded": 0,
+        "tx_expand_failed": 0,
+        "rx_tcp_gro_packets": 95983,
+        "rx_tcp_gro_forward_bypass": 0
+      }
+    },
+    {
+      "index": 0,
+      "enabled": 1,
+      "streams": 4,
+      "direction": "up",
+      "mbps": 343.2440400900788,
+      "retransmits": 65,
+      "cpu": 99.0139687756779,
+      "counters": {
+        "cso_hw": 3703,
+        "cso_sw": 69,
+        "cso_invalid": 0,
+        "tx_copy": 28,
+        "tx_expanded": 0,
+        "tx_expand_failed": 0,
+        "rx_tcp_gro_packets": 358782,
+        "rx_tcp_gro_forward_bypass": 0
+      }
+    },
+    {
+      "index": 0,
+      "enabled": 1,
+      "streams": 4,
+      "direction": "down",
+      "mbps": 258.4510464696258,
+      "retransmits": 0,
+      "cpu": 99.25986842105263,
+      "counters": {
+        "cso_hw": 268927,
+        "cso_sw": 429,
+        "cso_invalid": 0,
+        "tx_copy": 136,
+        "tx_expanded": 28,
+        "tx_expand_failed": 0,
+        "rx_tcp_gro_packets": 81835,
+        "rx_tcp_gro_forward_bypass": 0
+      }
+    },
+    {
+      "index": 1,
+      "enabled": 1,
+      "streams": 4,
+      "direction": "up",
+      "mbps": 338.9974059100015,
+      "retransmits": 57,
+      "cpu": 98.84963023829087,
+      "counters": {
+        "cso_hw": 4195,
+        "cso_sw": 43,
+        "cso_invalid": 0,
+        "tx_copy": 92,
+        "tx_expanded": 2,
+        "tx_expand_failed": 0,
+        "rx_tcp_gro_packets": 353893,
+        "rx_tcp_gro_forward_bypass": 0
+      }
+    },
+    {
+      "index": 1,
+      "enabled": 1,
+      "streams": 4,
+      "direction": "down",
+      "mbps": 257.3149755334418,
+      "retransmits": 1,
+      "cpu": 99.50617283950616,
+      "counters": {
+        "cso_hw": 267720,
+        "cso_sw": 479,
+        "cso_invalid": 0,
+        "tx_copy": 90,
+        "tx_expanded": 8,
+        "tx_expand_failed": 0,
+        "rx_tcp_gro_packets": 85278,
+        "rx_tcp_gro_forward_bypass": 0
+      }
+    }
+  ],
+  "cpu_local": [
+    {
+      "index": 0,
+      "enabled": 0,
+      "streams": 1,
+      "direction": "up",
+      "mbps": 199.9160139510315,
+      "retransmits": 0,
+      "cpu": 68.01319043693323,
+      "counters": {
+        "cso_hw": 0,
+        "cso_sw": 0,
+        "cso_invalid": 0,
+        "tx_copy": 90,
+        "tx_expanded": 0,
+        "tx_expand_failed": 0,
+        "rx_tcp_gro_packets": 0,
+        "rx_tcp_gro_forward_bypass": 0
+      }
+    },
+    {
+      "index": 0,
+      "enabled": 0,
+      "streams": 1,
+      "direction": "down",
+      "mbps": 150.0204475203199,
+      "retransmits": 0,
+      "cpu": 61.91261335531739,
+      "counters": {
+        "cso_hw": 0,
+        "cso_sw": 0,
+        "cso_invalid": 0,
+        "tx_copy": 88,
+        "tx_expanded": 0,
+        "tx_expand_failed": 0,
+        "rx_tcp_gro_packets": 0,
+        "rx_tcp_gro_forward_bypass": 0
+      }
+    },
+    {
+      "index": 1,
+      "enabled": 1,
+      "streams": 1,
+      "direction": "up",
+      "mbps": 199.84833483037175,
+      "retransmits": 0,
+      "cpu": 61.17065127782357,
+      "counters": {
+        "cso_hw": 2933,
+        "cso_sw": 26,
+        "cso_invalid": 0,
+        "tx_copy": 102,
+        "tx_expanded": 20,
+        "tx_expand_failed": 0,
+        "rx_tcp_gro_packets": 208375,
+        "rx_tcp_gro_forward_bypass": 0
+      }
+    },
+    {
+      "index": 1,
+      "enabled": 1,
+      "streams": 1,
+      "direction": "down",
+      "mbps": 149.93311141406582,
+      "retransmits": 0,
+      "cpu": 59.439406430338,
+      "counters": {
+        "cso_hw": 156216,
+        "cso_sw": 50,
+        "cso_invalid": 0,
+        "tx_copy": 50,
+        "tx_expanded": 6,
+        "tx_expand_failed": 0,
+        "rx_tcp_gro_packets": 46211,
+        "rx_tcp_gro_forward_bypass": 0
+      }
+    },
+    {
+      "index": 2,
+      "enabled": 1,
+      "streams": 1,
+      "direction": "up",
+      "mbps": 199.92362390786852,
+      "retransmits": 0,
+      "cpu": 60.46128500823723,
+      "counters": {
+        "cso_hw": 2952,
+        "cso_sw": 26,
+        "cso_invalid": 0,
+        "tx_copy": 46,
+        "tx_expanded": 0,
+        "tx_expand_failed": 0,
+        "rx_tcp_gro_packets": 208368,
+        "rx_tcp_gro_forward_bypass": 0
+      }
+    },
+    {
+      "index": 2,
+      "enabled": 1,
+      "streams": 1,
+      "direction": "down",
+      "mbps": 150.02034751562192,
+      "retransmits": 0,
+      "cpu": 60.01648804616653,
+      "counters": {
+        "cso_hw": 156081,
+        "cso_sw": 182,
+        "cso_invalid": 0,
+        "tx_copy": 34,
+        "tx_expanded": 0,
+        "tx_expand_failed": 0,
+        "rx_tcp_gro_packets": 57972,
+        "rx_tcp_gro_forward_bypass": 0
+      }
+    },
+    {
+      "index": 3,
+      "enabled": 0,
+      "streams": 1,
+      "direction": "up",
+      "mbps": 199.93581436766362,
+      "retransmits": 0,
+      "cpu": 66.77658697444353,
+      "counters": {
+        "cso_hw": 0,
+        "cso_sw": 0,
+        "cso_invalid": 0,
+        "tx_copy": 56,
+        "tx_expanded": 0,
+        "tx_expand_failed": 0,
+        "rx_tcp_gro_packets": 0,
+        "rx_tcp_gro_forward_bypass": 0
+      }
+    },
+    {
+      "index": 3,
+      "enabled": 0,
+      "streams": 1,
+      "direction": "down",
+      "mbps": 150.0205475251511,
+      "retransmits": 0,
+      "cpu": 62.9843363561418,
+      "counters": {
+        "cso_hw": 0,
+        "cso_sw": 0,
+        "cso_invalid": 0,
+        "tx_copy": 44,
+        "tx_expanded": 0,
+        "tx_expand_failed": 0,
+        "rx_tcp_gro_packets": 0,
+        "rx_tcp_gro_forward_bypass": 0
+      }
+    }
+  ],
+  "cpu_bridge": [
+    {
+      "index": 0,
+      "enabled": 0,
+      "streams": 1,
+      "direction": "up",
+      "mbps": 79.9217182077055,
+      "retransmits": 0,
+      "cpu": 35.449299258037925,
+      "counters": {
+        "cso_hw": 0,
+        "cso_sw": 0,
+        "cso_invalid": 0,
+        "tx_copy": 35353,
+        "tx_expanded": 0,
+        "tx_expand_failed": 0,
+        "rx_tcp_gro_packets": 0,
+        "rx_tcp_gro_forward_bypass": 0
+      }
+    },
+    {
+      "index": 0,
+      "enabled": 0,
+      "streams": 1,
+      "direction": "down",
+      "mbps": 79.94687801249508,
+      "retransmits": 0,
+      "cpu": 59.109645507007414,
+      "counters": {
+        "cso_hw": 0,
+        "cso_sw": 0,
+        "cso_invalid": 0,
+        "tx_copy": 83500,
+        "tx_expanded": 0,
+        "tx_expand_failed": 0,
+        "rx_tcp_gro_packets": 0,
+        "rx_tcp_gro_forward_bypass": 0
+      }
+    },
+    {
+      "index": 1,
+      "enabled": 1,
+      "streams": 1,
+      "direction": "up",
+      "mbps": 79.99985474192245,
+      "retransmits": 0,
+      "cpu": 37.69547325102881,
+      "counters": {
+        "cso_hw": 0,
+        "cso_sw": 0,
+        "cso_invalid": 0,
+        "tx_copy": 35308,
+        "tx_expanded": 55,
+        "tx_expand_failed": 0,
+        "rx_tcp_gro_packets": 13,
+        "rx_tcp_gro_forward_bypass": 83330
+      }
+    },
+    {
+      "index": 1,
+      "enabled": 1,
+      "streams": 1,
+      "direction": "down",
+      "mbps": 79.94688467414869,
+      "retransmits": 0,
+      "cpu": 50.7007419620775,
+      "counters": {
+        "cso_hw": 0,
+        "cso_sw": 0,
+        "cso_invalid": 0,
+        "tx_copy": 83411,
+        "tx_expanded": 83345,
+        "tx_expand_failed": 0,
+        "rx_tcp_gro_packets": 31069,
+        "rx_tcp_gro_forward_bypass": 8
+      }
+    },
+    {
+      "index": 2,
+      "enabled": 1,
+      "streams": 1,
+      "direction": "up",
+      "mbps": 79.91325081477284,
+      "retransmits": 6,
+      "cpu": 36.521022258862324,
+      "counters": {
+        "cso_hw": 0,
+        "cso_sw": 0,
+        "cso_invalid": 0,
+        "tx_copy": 35402,
+        "tx_expanded": 5,
+        "tx_expand_failed": 0,
+        "rx_tcp_gro_packets": 9,
+        "rx_tcp_gro_forward_bypass": 83325
+      }
+    },
+    {
+      "index": 2,
+      "enabled": 1,
+      "streams": 1,
+      "direction": "down",
+      "mbps": 79.94684470424367,
+      "retransmits": 1,
+      "cpu": 61.99505358615004,
+      "counters": {
+        "cso_hw": 0,
+        "cso_sw": 0,
+        "cso_invalid": 0,
+        "tx_copy": 83426,
+        "tx_expanded": 83335,
+        "tx_expand_failed": 0,
+        "rx_tcp_gro_packets": 30894,
+        "rx_tcp_gro_forward_bypass": 8
+      }
+    },
+    {
+      "index": 3,
+      "enabled": 0,
+      "streams": 1,
+      "direction": "up",
+      "mbps": 79.91932159369341,
+      "retransmits": 0,
+      "cpu": 37.26298433635614,
+      "counters": {
+        "cso_hw": 0,
+        "cso_sw": 0,
+        "cso_invalid": 0,
+        "tx_copy": 35219,
+        "tx_expanded": 0,
+        "tx_expand_failed": 0,
+        "rx_tcp_gro_packets": 0,
+        "rx_tcp_gro_forward_bypass": 0
+      }
+    },
+    {
+      "index": 3,
+      "enabled": 0,
+      "streams": 1,
+      "direction": "down",
+      "mbps": 79.94674477965603,
+      "retransmits": 0,
+      "cpu": 61.005770816158275,
+      "counters": {
+        "cso_hw": 0,
+        "cso_sw": 0,
+        "cso_invalid": 0,
+        "tx_copy": 83426,
+        "tx_expanded": 0,
+        "tx_expand_failed": 0,
+        "rx_tcp_gro_packets": 0,
+        "rx_tcp_gro_forward_bypass": 0
+      }
+    }
+  ],
+  "date": "2026-10-25",
+  "module_sha256": "37cf8e9e403f9e5466e058a3e7ceed21794d62b60c3118adb7e3b05ed60fd505",
+  "direction": "up: client to router (or wired host for bridge); down: reverse",
+  "duration_seconds": 12,
+  "paired_options": [
+    "rx_batch",
+    "tx_batch",
+    "rx_tcp_gro",
+    "rx_tcp_gro_local_data",
+    "tx_expand",
+    "cso_stack"
+  ],
+  "aggregation": "TX A-MSDU off, A-MPDU on",
+  "wire_checks": {
+    "orphan-wire-amsdu1": {
+      "tcp_packets": 14504,
+      "bad_ip": 0,
+      "bad_tcp": 0,
+      "truncated": 0
+    },
+    "orphan-netifd-wire-amsdu-1": {
+      "tcp_packets": 11182,
+      "bad_ip": 0,
+      "bad_tcp": 0,
+      "truncated": 0
+    },
+    "orphan-wire-amsdu0": {
+      "tcp_packets": 13259,
+      "bad_ip": 0,
+      "bad_tcp": 0,
+      "truncated": 0
+    }
+  }
+}
