@@ -101,6 +101,25 @@ variables; `eapd` and `nas` (authenticator for APs, supplicant for stations) do 
 calibration data comes from the stock firmware's NVRAM defaults (`/usr/share/wlblob/wl-nvram.tmpl`)
 plus the MAC addresses from the `devdata` partition.
 
+## Performance
+
+Measured on 2026-10-25 with the OpenWrt r37659 (kernel 6.18.55) image, both radios as APs, a
+GL-MT6000 as the client about two metres away, `iperf3` server running on the DIR-868L itself
+(TCP, 15 s, one band active at a time).  "client → router" is the direction a client uploads.
+
+| band | mode | streams | client → router | router → client | router CPU idle |
+|---|---|---|---|---|---|
+| 5 GHz (BCM4360) | VHT80, channel 36 | 1 | 284 Mbit/s | 216 Mbit/s | 8 % / 3 % |
+| 5 GHz (BCM4360) | VHT80, channel 36 | 4 | 308 Mbit/s | 229 Mbit/s | 1 % / 0 % |
+| 2.4 GHz (BCM4331) | HT20, channel 1 | 1 | 54 Mbit/s | 103 Mbit/s | 61 % / 54 % |
+| 2.4 GHz (BCM4331) | HT20, channel 1 | 4 | 51 Mbit/s | 112 Mbit/s | 58 % / 48 % |
+
+On 5 GHz the single Cortex-A9 core of the BCM47081 is the limit (softirq 60 to 80 %), not the
+radio: the client negotiates 3 spatial streams (VHT-MCS 9, 1300 Mbit/s PHY rate).  The 2.4 GHz
+upload is bounded by the client's 2-stream HT20 rate (MCS 12, 78 Mbit/s).  Hardware packet
+acceleration (CTF/PKTC) of the stock firmware is not used.  The numbers match those measured
+earlier on kernel 6.12 (273/216 Mbit/s), so the kernel bump cost nothing.
+
 ## Checking that LuCI and netifd get what they need
 
 LuCI's wireless page has no logic of its own: it shows what `iwinfo` reports (channels, modes,
