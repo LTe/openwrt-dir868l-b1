@@ -852,7 +852,13 @@ dma64_dd_upd(dma_info_t *di, dma64dd_t *ddring, dmaaddr_t pa, uint outidx, uint3
 		}
 	}
 
-#if defined(BCM47XX_CA9) && !defined(__NetBSD__)
+/* The Linux blob port allocates descriptor rings with dma_alloc_coherent().
+ * The SDK's per-descriptor cache flush is then only an address lookup whose
+ * result is unused.  W_REG() still orders the descriptor writes before the
+ * doorbell; coherent allocation does not replace that publication barrier.
+ */
+#if defined(BCM47XX_CA9) && !defined(__NetBSD__) && \
+	(!defined(WLBLOB_PORT) || defined(BCM_SECURE_DMA))
 #ifndef BCM_SECURE_DMA
 	DMA_MAP(di->osh, (void *)(((uint)(&ddring[outidx])) & ~0x1f), 32, DMA_TX, NULL, NULL);
 #else

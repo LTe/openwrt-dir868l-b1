@@ -9,7 +9,9 @@
 #   dlink wl_ap.ko 6.37.14.56 (AP only) from the DIR-868L B1 2.03B01 stock firmware; give the path
 #         to the extracted module in WLBLOB_DLINK_KO.
 # tools/blobsurgery.py cuts the 2.6.36 Linux glue out of the vendor object and retargets the
-# remaining imports to the new glue; the result is linked into wl.ko.
+# remaining imports to the new glue; the result is linked into wl.ko.  The vendor object keeps
+# its hot code in .text.fastpath; that section is renamed to .text so that ld -r merges it and
+# the module ends up with one text section (perf resolves symbols of one text section only).
 #
 include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/kernel.mk
@@ -36,6 +38,7 @@ define KernelPackage/brcm-wl-blob
   SUBMENU:=Wireless Drivers
   TITLE:=Broadcom BCM4360/BCM4331 wl driver (prebuilt SDK 6.37 core)
   DEPENDS:=@TARGET_bcm53xx
+  KCONFIG:=CONFIG_GRO_CELLS=y
   FILES:=$(PKG_BUILD_DIR)/wl.ko
 endef
 
@@ -50,6 +53,7 @@ define Build/Prepare/blob
 	python3 -I ./tools/blobsurgery.py $(1) $(PKG_BUILD_DIR)/blob.stage1.o $(3) > $(PKG_BUILD_DIR)/surgery.log
 	$(TARGET_CROSS)objcopy -R __versions -R .modinfo -R __param -R .rel__param \
 		-R .gnu.linkonce.this_module -R .rel.gnu.linkonce.this_module -R .note.gnu.build-id -R .comment \
+		--rename-section .text.fastpath=.text \
 		$(PKG_BUILD_DIR)/blob.stage1.o $(PKG_BUILD_DIR)/$(2)
 	$(TARGET_CROSS)ld -r -o /dev/null $(PKG_BUILD_DIR)/$(2)
 endef

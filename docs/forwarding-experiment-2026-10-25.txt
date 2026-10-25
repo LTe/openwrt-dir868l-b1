@@ -1,0 +1,114 @@
+Bridged TX copy cost and selective GRO experiments, 2026-10-25
+
+Base: wl-gro-tcp / validated FT6.37 CSO; no TSO probe or modern DMA changes.
+Source is isolated from the normal package feed. No installed boot module
+or persistent networking configuration is changed.
+
+Build02 SHA256:
+1b929173a274060ff7fa1c8cf90ab4663b52c532cfab62cc3d87985bacd2c9b2
+Build03 SHA256:
+43ddb327ab3ad996acf7f28f8121fc3e1dbb7da107e9d0d8e2183f286f2adae6
+Both builds exit0; saved binaries in runtime-01.
+
+Measurement setup:
+Workstation10.99.0.3 -> wired Ethernet -> Dlink bridge -> Wi-Fi MT10.99.0.2.
+Wired path still limited to100Mbit/s; tests offer80Mbit/s,10seconds each.
+No routing policy or flowtable is installed by bridge-bench.py.
+For paired runs, off/on/on/off, both directions, CPU from /proc/stat deltas.
+The counters are diagnostic global unsigned counters on this single-core
+test router; reasons can overlap, deltas use32-bit modular subtraction.
+
+Instrumented initial result:
+Ethernet->WiFi:69533 copies/69533 packets,104730461 copied bytes in10seconds.
+All copies have insufficient headroom;26 also cloned, zero nonlinear/shared.
+WiFi->Ethernet causes29024 copied TX packets (mostly returning ACKs),~1.9MB.
+Observed incoming headroom is64..255bytes, below dev->needed_headroom256.
+
+tx_expand:
+For private linear skb structures, replace skb_copy_expand + free with
+pskb_expand_head. This still copies data but reuses the skb structure and
+kernel code adjusts header/checksum offsets and unshares cloned linear data.
+Shared skb structures and nonlinear packets retain the old copy path.
+Failure frees the input and uses the existing drop/flush behavior.
+Build02 applies to all lengths. Build03 adds tx_expand_min_len (default256)
+so small ACK buffers retain the original path. Default tx_expand remains off.
+
+Build02 performance, runtime-01/expand-paired:
+                   expansion off       expansion on
+Ethernet->WiFi     79.945Mbps/54.621%    79.895Mbps/51.227% CPU
+WiFi->Ethernet     79.948Mbps/41.052%    79.930Mbps/41.986% CPU
+TX CPU per Mbit improves~6.2%; reverse direction does not improve.
+Total TCP retransmits off9/on1 across both directions, no allocation failures.
+These are CPU-efficiency results below the wired bottleneck, not a demonstrated
+increase in maximum bridge throughput or gigabit support.
+
+Build02 correctness:
+TCP512 x65507bytes and UDP50000 x1400bytes pass BOTH directions, all payload,
+sequence/duplicate/order checks clean; no new kernel messages.
+Initial host UDP receiver could not use SO_RCVBUFFORCE in the container even
+as root; private host validator uses SO_RCVBUF with rmem_max4194304 instead.
+This test infrastructure failure is recorded, not a driver failure.
+Original65507-byte UDP generator sends32datagrams (~2MB) before pacing.
+With tx_expand on,128 sent/124 received in WiFi->Ethernet direction; control
+with tx_expand off also128/124, no bad received payload. This failure occurs
+on the data path opposite the modified Wi-Fi TX buffer preparation.
+The private paced validator spaces large datagrams individually at15Mbit/s:
+128/128 pass in BOTH directions with tx_expand on, zero payload errors.
+Original/burst and paced results retained separately; do not erase loss evidence.
+
+GRO boundary, runtime-01/gro-bridge-paired (tx_expand off):
+                   TCP GRO off         TCP GRO on
+WiFi->Ethernet     79.935Mbps/34.350%    79.944Mbps/43.707% CPU
+Ethernet->WiFi     79.998Mbps/60.814%    79.998Mbps/56.680% CPU
+The earlier local receive GRO benefit does NOT generalize to bridging.
+Bridge RX worsens~27% in these paired CPU measurements. Therefore build03
+adds opt-in rx_tcp_gro_local_data: bypass GRO for TCP DATA addressed to neither
+the receiving netdev nor its master, while retaining existing ACK delivery.
+Eligible locally addressed/routed data retains GRO. All-protocol rx_gro=1
+still takes precedence. IPv6 extension headers retain the old bypass behavior.
+The selector uses RCU for the upper-device lookup and does not alter packet
+contents or invent RX checksum validity.
+
+Build03 selective-GRO performance and final correctness are recorded in
+runtime-01/gro-selective-paired and subsequent validation artifacts.
+These experimental changes are not yet promoted into the package feed.
+
+Build03 results, runtime-01/gro-selective-paired:
+tx_expand=1, min_len256, rx_tcp_gro=1 fixed; toggle local-data selector ABBA.
+                   selector off        selector on
+WiFi->Ethernet     79.943Mbps/42.941%    79.945Mbps/36.599% CPU
+Ethernet->WiFi     79.998Mbps/52.889%    79.946Mbps/55.071% CPU
+Forwarded data bypass counter139016 in the two enabled RX trials versus0off.
+Reverse direction bypasses only16 data packets; no reverse-direction gain is
+claimed from this selector. RX retransmits0 in all four trials; TX off1/on0.
+The two optimizations' percentages come from SEPARATE comparisons and must
+not be added or presented as a measured combined peak-throughput gain.
+
+Final correctness (integrity-final, paced generator):
+TCP512 x65507B, UDP50000 x1400B and UDP128 x65507B all pass both directions.
+No missing/duplicate/out-of-order/bad-payload results, no new kernel messages.
+wire-final:30942 captured TCP packets/30942 filtered/0kernel drops;
+0bad IP checksums,0bad TCP checksums,0truncated frames. Peer GRO disabled only
+for capture and restored; firewall test rules removed afterward.
+tx_expand_failed=0 and cso_invalid=0.
+
+Local receiver preservation:
+local-gro-check:98719 packets enter GRO and0forward-bypass while receiving
+on the router;226.96Mbps/0retransmits in this short5s observation.
+Because this was below previous peaks, local-selective-paired checks equal
+offered200Mbps with selector off/on/on/off. Link speed varied in early runs.
+Mean off191.946Mbps/61.262% CPU, on189.467Mbps/60.479% CPU.
+Mean per-trial CPU/Mbps off0.318975, on0.319173 (~0.06% difference).
+TCP retransmits off13/on2. This shows no material measured local CPU/Mbit
+penalty in these trials, but is not a stable peak-speed comparison.
+
+Final live candidate: build03 in RAM with rx_batch=1 tx_batch=1,
+cso_offload=1 cso_stack=1 rx_tcp_gro=1 rx_tcp_gro_local_data=1,
+tx_expand=1 tx_expand_min_len=256, amsdu0/ampdu1.
+Installed boot wl.ko remains SHA256
+cb4dc1a291664321b5ecd31b055ec3463b9f35c09f997a369802e15723dda790.
+
+Next larger opportunity: reserve enough Ethernet RX headroom before DMA,
+so forwarding can avoid the payload copy entirely. BGMAC is built into this
+kernel and lacks ndo_set_rx_headroom; current wl changes only make the
+unavoidable copy cheaper. No BGMAC modification has been deployed.

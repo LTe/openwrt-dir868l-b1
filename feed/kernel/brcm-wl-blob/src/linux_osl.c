@@ -26,6 +26,16 @@
 #endif
 #define PCI_CFG_RETRY		10
 
+/* Private metadata follows, and does not change, the blob's skb ABI. */
+struct wl_packet {
+	struct wl_skb skb;
+	struct wl_packet *pool_next;
+	unsigned char *pool_data;
+	bool poolable;
+};
+#define AMSDU_HEADER_LEN 192
+#define AMSDU_POOL_LIMIT 64
+
 struct osl_info {
 	osl_pubinfo_t pub;
 	uint magic;
@@ -39,11 +49,34 @@ struct osl_info {
 	 * in the vmalloc area, so DMA_MAP/UNMAP on them must just translate addresses. */
 	struct { void *va; dma_addr_t pa; uint size; } coh[32];
 	uint ncoh;
+	spinlock_t pool_lock;
+	struct wl_packet *header_pool;
+	uint header_pool_count;
 };
 
 uint32 g_assert_type = 0;
 static struct kmem_cache *wlskb_cache;
 static atomic_t osl_users = ATOMIC_INIT(0);
+static bool amsdu_pool;
+module_param(amsdu_pool, bool, 0644);
+MODULE_PARM_DESC(amsdu_pool, "experimental reuse of internal 192-byte header buffers");
+static atomic_t pool_hits = ATOMIC_INIT(0), pool_misses = ATOMIC_INIT(0);
+static atomic_t pool_puts = ATOMIC_INIT(0), pool_cached = ATOMIC_INIT(0);
+static atomic_t pool_rejects = ATOMIC_INIT(0);
+
+static int amsdu_pool_stats_get(char *buf, const struct kernel_param *kp)
+{
+	return scnprintf(buf, PAGE_SIZE, "hits=%d misses=%d puts=%d cached=%d rejects=%d\n",
+		atomic_read(&pool_hits), atomic_read(&pool_misses), atomic_read(&pool_puts),
+		atomic_read(&pool_cached), atomic_read(&pool_rejects));
+}
+static const struct kernel_param_ops amsdu_pool_stats_ops = { .get = amsdu_pool_stats_get };
+module_param_cb(amsdu_pool_stats, &amsdu_pool_stats_ops, NULL, 0400);
+
+bool wlblob_amsdu_pool_test_enabled(void)
+{
+	return READ_ONCE(amsdu_pool);
+}
 
 void osl_assert(const char *exp, const char *file, int line)
 {
@@ -73,6 +106,7 @@ static void wlskb_layout_check(void)
 	BUILD_BUG_ON(offsetof(struct wl_skb, head) != 180 + WLSKB_FT_SHIFT);
 	BUILD_BUG_ON(offsetof(struct wl_skb, data) != 184 + WLSKB_FT_SHIFT);
 	BUILD_BUG_ON(sizeof(struct wl_skb) != WLSKB_SIZE);
+	BUILD_BUG_ON(offsetof(struct wl_packet, skb) != 0);
 }
 
 osl_t *osl_attach(void *pdev, uint bustype, bool pkttag)
@@ -80,16 +114,18 @@ osl_t *osl_attach(void *pdev, uint bustype, bool pkttag)
 	osl_t *osh;
 
 	wlskb_layout_check();
-	if (atomic_inc_return(&osl_users) == 1) {
-		wlskb_cache = kmem_cache_create("wl_skb", sizeof(struct wl_skb), 0, 0, NULL);
-		if (!wlskb_cache) {
-			atomic_dec(&osl_users);
-			return NULL;
-		}
-	}
 	osh = kzalloc(sizeof(osl_t), GFP_KERNEL);
 	if (!osh)
 		return NULL;
+	if (atomic_inc_return(&osl_users) == 1) {
+		wlskb_cache = kmem_cache_create("wl_skb", sizeof(struct wl_packet), 0, 0, NULL);
+		if (!wlskb_cache) {
+			atomic_dec(&osl_users);
+			kfree(osh);
+			return NULL;
+		}
+	}
+	spin_lock_init(&osh->pool_lock);
 	osh->magic = OS_HANDLE_MAGIC;
 	osh->pdev = pdev;
 	osh->pub.pkttag = pkttag;
@@ -100,8 +136,16 @@ osl_t *osl_attach(void *pdev, uint bustype, bool pkttag)
 
 void osl_detach(osl_t *osh)
 {
+	struct wl_packet *entry;
 	if (!osh)
 		return;
+	/* Core callbacks and packet users have already drained at detach. */
+	while ((entry = osh->header_pool)) {
+		osh->header_pool = entry->pool_next;
+		dev_kfree_skb_any(entry->skb.native);
+		kmem_cache_free(wlskb_cache, entry);
+		atomic_dec(&pool_cached);
+	}
 	kfree(osh);
 	if (atomic_dec_and_test(&osl_users)) {
 		kmem_cache_destroy(wlskb_cache);
@@ -115,11 +159,8 @@ struct pci_dev *osl_pci_device(osl_t *osh)
 }
 
 /* ---- shadow packets ---- */
-static struct wl_skb *wlskb_alloc(osl_t *osh, struct sk_buff *skb)
+static void wlskb_init(osl_t *osh, struct wl_skb *p, struct sk_buff *skb)
 {
-	struct wl_skb *p = kmem_cache_zalloc(wlskb_cache, GFP_ATOMIC);
-	if (!p)
-		return NULL;
 	p->native = skb;
 	p->dev = skb->dev;
 	p->head = skb->head;
@@ -137,7 +178,82 @@ static struct wl_skb *wlskb_alloc(osl_t *osh, struct sk_buff *skb)
 	if (skb->ip_summed == CHECKSUM_PARTIAL)
 		p->flags1 |= 3 << WLSKB_IPSUMMED_SHIFT;
 	atomic_inc(&osh->pktalloced);
+}
+
+static struct wl_skb *wlskb_alloc(osl_t *osh, struct sk_buff *skb)
+{
+	struct wl_skb *p = kmem_cache_zalloc(wlskb_cache, GFP_ATOMIC);
+	if (!p)
+		return NULL;
+	wlskb_init(osh, p, skb);
 	return p;
+}
+
+static struct wl_skb *wlskb_pool_take(osl_t *osh)
+{
+	struct wl_packet *entry;
+	struct sk_buff *skb;
+	unsigned long flags;
+
+	spin_lock_irqsave(&osh->pool_lock, flags);
+	entry = osh->header_pool;
+	if (entry) {
+		osh->header_pool = entry->pool_next;
+		osh->header_pool_count--;
+		atomic_dec(&pool_cached);
+	}
+	spin_unlock_irqrestore(&osh->pool_lock, flags);
+	if (!entry) {
+		atomic_inc(&pool_misses);
+		return NULL;
+	}
+	atomic_inc(&pool_hits);
+	skb = entry->skb.native;
+	skb->data = entry->pool_data;
+	skb->len = 0;
+	skb_reset_tail_pointer(skb);
+	skb_put(skb, AMSDU_HEADER_LEN);
+	skb->priority = 0;
+	skb->protocol = 0;
+	skb->mark = 0;
+	skb->dev = NULL;
+	skb->ip_summed = CHECKSUM_NONE;
+	skb->next = NULL;
+	skb->prev = NULL;
+	memset(&entry->skb, 0, sizeof(entry->skb));
+	entry->pool_next = NULL;
+	wlskb_init(osh, &entry->skb, skb);
+	return &entry->skb;
+}
+
+static bool wlskb_pool_return(osl_t *osh, struct wl_skb *p)
+{
+	struct wl_packet *entry = (struct wl_packet *)p;
+	struct sk_buff *skb = p->native;
+	unsigned long flags;
+	bool cached = false;
+
+	if (!entry->poolable || !READ_ONCE(amsdu_pool))
+		return false;
+	/* Only OSL-owned linear buffers which have not escaped to the stack.
+	 * A headroom expansion can share the original data through skb_clone().
+	 */
+	if (!skb || skb_shared(skb) || skb_cloned(skb) || skb_is_nonlinear(skb) ||
+	    skb->sk || skb->destructor) {
+		atomic_inc(&pool_rejects);
+		return false;
+	}
+	spin_lock_irqsave(&osh->pool_lock, flags);
+	if (osh->header_pool_count < AMSDU_POOL_LIMIT) {
+		entry->pool_next = osh->header_pool;
+		osh->header_pool = entry;
+		osh->header_pool_count++;
+		cached = true;
+		atomic_inc(&pool_puts);
+		atomic_inc(&pool_cached);
+	}
+	spin_unlock_irqrestore(&osh->pool_lock, flags);
+	return cached;
 }
 
 /* bring the real skb in sync with what the core did to the shadow */
@@ -203,6 +319,11 @@ void *osl_pktget(osl_t *osh, uint len)
 	struct sk_buff *skb;
 	struct wl_skb *p;
 
+	if (len == AMSDU_HEADER_LEN && READ_ONCE(amsdu_pool)) {
+		p = wlskb_pool_take(osh);
+		if (p)
+			return p;
+	}
 	skb = __dev_alloc_skb(len + 32, GFP_ATOMIC);
 	if (!skb)
 		return NULL;
@@ -212,6 +333,11 @@ void *osl_pktget(osl_t *osh, uint len)
 	p = wlskb_alloc(osh, skb);
 	if (!p)
 		dev_kfree_skb_any(skb);
+	else if (len == AMSDU_HEADER_LEN) {
+		struct wl_packet *entry = (struct wl_packet *)p;
+		entry->poolable = true;
+		entry->pool_data = skb->data;
+	}
 	return p;
 }
 
@@ -225,9 +351,11 @@ void osl_pktfree(osl_t *osh, void *pkt, bool send)
 		if (send && osh->pub.tx_fn)
 			osh->pub.tx_fn(osh->pub.tx_ctx, p, 0);
 		p->next = NULL;
-		if (p->native)
-			dev_kfree_skb_any(p->native);
-		kmem_cache_free(wlskb_cache, p);
+		if (!wlskb_pool_return(osh, p)) {
+			if (p->native)
+				dev_kfree_skb_any(p->native);
+			kmem_cache_free(wlskb_cache, p);
+		}
 		atomic_dec(&osh->pktalloced);
 		p = next;
 	}
@@ -482,6 +610,9 @@ uint32 osl_pci_read_config(osl_t *osh, uint offset, uint size)
 		if (val != 0xffffffff)
 			break;
 	} while (retry--);
+#ifdef WLBLOB_TRACE
+	val = wltrace_cfg_read(offset, val);
+#endif
 	return val;
 }
 
@@ -489,6 +620,10 @@ void osl_pci_write_config(osl_t *osh, uint offset, uint size, uint val)
 {
 	uint retry = PCI_CFG_RETRY;
 
+#ifdef WLBLOB_TRACE
+	if (wltrace_cfg_write(offset, val))
+		return;
+#endif
 	do {
 		pci_write_config_dword(osh->pdev, offset, val);
 		if (offset != PCI_BAR0_WIN)

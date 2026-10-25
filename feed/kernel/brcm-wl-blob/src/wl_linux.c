@@ -24,8 +24,14 @@
 #include <linux/uaccess.h>
 #include <linux/if_arp.h>
 #include <linux/rtnetlink.h>
+#include <net/gro_cells.h>
 #include <generated/utsrelease.h>
 #include <pcicfg.h>
+#ifdef WLBLOB_TRACE
+#include "wltrace.h"
+#else
+#define wltrace_mark(f, v) do {} while (0)
+#endif
 
 #define WL_IFTYPE_BSS	1
 #define WL_IFTYPE_WDS	2
@@ -47,6 +53,9 @@ typedef struct wl_if {
 	char name[IFNAMSIZ];
 	struct work_struct reg_work;
 	struct work_struct del_work;
+	struct gro_cells gro_cells;
+	void *tx_head, *tx_tail;
+	unsigned int tx_count, tx_bytes;
 } wl_if_t;
 
 typedef struct wl_timer {
@@ -66,6 +75,11 @@ typedef struct wl_info {
 	void *pub;			/* wlc_pub_t, opaque, accessed via WLPUB_* below */
 	void *wlc;
 	osl_t *osh;
+	/* Both vendor cores read a CTF handle directly at +0x10 in their
+	 * PKTC receive paths. Keep it NULL: this port has no CTF instance.
+	 * Putting dev here falsely enables CTF and dereferences pub->brc_hot.
+	 */
+	void *ctf_compat;
 	struct net_device *dev;		/* primary netdev */
 	wl_if_t *if_list;
 	spinlock_t lock;		/* WL_LOCK: serialises every call into the core */
@@ -75,6 +89,7 @@ typedef struct wl_info {
 	bool resched;
 	uint32 processed;
 	struct tasklet_struct tasklet;
+	struct list_head *rx_batch; /* stack-owned list, only while DPC holds WL_LOCK */
 	struct tasklet_struct tx_tasklet;
 	atomic_t callbacks;
 	wl_timer_t *timers;
@@ -133,6 +148,25 @@ static int skip_chipmatch;
 static int ioctl_debug;
 module_param(ioctl_debug, int, 0644);
 MODULE_PARM_DESC(ioctl_debug, "log every wl ioctl (cmd, len, caller)");
+/* Opt in while UDP socket-buffer pressure under batched delivery is evaluated. */
+static bool rx_gro;
+static bool tx_batch;
+module_param(tx_batch, bool, 0644);
+MODULE_PARM_DESC(tx_batch, "experimental same-flow TCP batching using netdev_xmit_more");
+static atomic_t tx_batch_packets = ATOMIC_INIT(0);
+static atomic_t tx_batch_calls = ATOMIC_INIT(0);
+static int tx_batch_stats_get(char *buf, const struct kernel_param *kp)
+{
+	return scnprintf(buf, PAGE_SIZE, "packets=%d calls=%d\n",
+		atomic_read(&tx_batch_packets), atomic_read(&tx_batch_calls));
+}
+static const struct kernel_param_ops tx_batch_stats_ops = { .get = tx_batch_stats_get };
+module_param_cb(tx_batch_stats, &tx_batch_stats_ops, NULL, 0400);
+static bool rx_batch;
+module_param(rx_batch, bool, 0644);
+MODULE_PARM_DESC(rx_batch, "deliver DPC receive packets as a list after unlocking");
+module_param(rx_gro, bool, 0644);
+MODULE_PARM_DESC(rx_gro, "coalesce received TCP packets with per-interface NAPI GRO");
 static int selftest;
 module_param(selftest, int, 0);
 MODULE_PARM_DESC(selftest, "run the glue/OSL self test at probe time (needs no radio)");
@@ -150,7 +184,7 @@ uint wl_reset(wl_info_t *wl);
 uint32 wl_intrsoff(wl_info_t *wl);
 void wl_intrsrestore(wl_info_t *wl, uint32 macintmask);
 static void wl_dpc(struct tasklet_struct *t);
-static int wl_start(struct sk_buff *skb, struct net_device *dev);
+static netdev_tx_t wl_start(struct sk_buff *skb, struct net_device *dev);
 
 /* ---- netdev private area: just a pointer back to our wl_if ---- */
 struct wl_priv_link {
@@ -213,6 +247,7 @@ static void wl_free_if(wl_info_t *wl, wl_if_t *wlif)
 		unregister_netdev(wlif->dev);
 		wlif->dev_registered = FALSE;
 	}
+	gro_cells_destroy(&wlif->gro_cells);
 	if (wlif->dev)
 		free_netdev(wlif->dev);
 	kfree(wlif);
@@ -234,15 +269,28 @@ int wl_up(wl_info_t *wl)
 	return 0;
 }
 
+/* WL_LOCK held; a closing interface must not retain an unfinished TX batch. */
+static void wl_tx_discard(wl_if_t *wlif)
+{
+	if (!wlif->tx_head)
+		return;
+	wlif->dev->stats.tx_dropped += wlif->tx_count;
+	PKTCFREE(wlif->wl->osh, wlif->tx_head, TRUE);
+	wlif->tx_head = wlif->tx_tail = NULL;
+	wlif->tx_count = wlif->tx_bytes = 0;
+}
+
 void wl_down(wl_info_t *wl)
 {
 	wl_if_t *wlif;
 	uint callbacks, ret_val = 0;
 	int i;
 
-	for (wlif = wl->if_list; wlif; wlif = wlif->next)
+	for (wlif = wl->if_list; wlif; wlif = wlif->next) {
 		if (wlif->dev)
 			netif_stop_queue(wlif->dev);
+		wl_tx_discard(wlif);
+	}
 	if (wl->wlc)
 		ret_val = wlc_down(wl->wlc);
 	callbacks = atomic_read(&wl->callbacks) - ret_val;
@@ -275,10 +323,46 @@ static int wl_close(struct net_device *dev)
 
 	netif_stop_queue(dev);
 	WL_LOCK(wl);
+	wl_tx_discard(WL_DEV_IF(dev));
 	if (dev == wl->dev)
 		wl_down(wl);
 	WL_UNLOCK(wl);
 	return 0;
+}
+
+/* Only plain, unicast IPv4 TCP with identical L2 addresses, TOS and flow.
+ * The blob prepares one Ethernet/LLC header and copies it to chain members.
+ * VLAN, EAPOL, IP fragments, options and TCP control packets stay unbatched.
+ */
+static bool wl_tx_batch_eligible(void *pkt)
+{
+	const u8 *d = PKTDATA(NULL, pkt);
+	return PKTLEN(NULL, pkt) >= 54 && !(d[0] & 1) &&
+		d[12] == 8 && d[13] == 0 && d[14] == 0x45 &&
+		!(d[20] & 0x3f) && !d[21] && d[23] == 6 &&
+		(d[47] & 0x17) == 0x10;
+}
+
+static bool wl_tx_same_flow(void *a, void *b)
+{
+	const u8 *x = PKTDATA(NULL, a), *y = PKTDATA(NULL, b);
+	return PKTPRIO(a) == PKTPRIO(b) && WLSKB(a)->mark == WLSKB(b)->mark &&
+		!memcmp(x, y, 14) && x[15] == y[15] && !memcmp(x + 26, y + 26, 12);
+}
+
+/* WL_LOCK held. Clear ownership before entering the core. */
+static void wl_tx_flush(wl_if_t *wlif)
+{
+	void *head = wlif->tx_head;
+	if (!head)
+		return;
+	PKTCSETCNT(head, wlif->tx_count);
+	PKTCSETLEN(head, wlif->tx_bytes);
+	atomic_add(wlif->tx_count, &tx_batch_packets);
+	atomic_inc(&tx_batch_calls);
+	wlif->tx_head = wlif->tx_tail = NULL;
+	wlif->tx_count = wlif->tx_bytes = 0;
+	wlc_sendpkt(wlif->wl->wlc, head, wlif->wlcif);
 }
 
 static netdev_tx_t wl_start(struct sk_buff *skb, struct net_device *dev)
@@ -288,10 +372,16 @@ static netdev_tx_t wl_start(struct sk_buff *skb, struct net_device *dev)
 	void *pkt;
 
 	if (skb_headroom(skb) < dev->needed_headroom || skb_cloned(skb) || skb_is_nonlinear(skb)) {
-		struct sk_buff *nskb = skb_copy_expand(skb, dev->needed_headroom, 0, GFP_ATOMIC);
+		struct sk_buff *nskb = skb_copy_expand(skb, dev->needed_headroom,
+						    dev->needed_tailroom, GFP_ATOMIC);
 		dev_kfree_skb_any(skb);
-		if (!nskb)
+		if (!nskb) {
+			dev->stats.tx_dropped++;
+			WL_LOCK(wl);
+			wl_tx_flush(wlif);
+			WL_UNLOCK(wl);
 			return NETDEV_TX_OK;
+		}
 		skb = nskb;
 	}
 	skb->next = NULL;
@@ -301,13 +391,33 @@ static netdev_tx_t wl_start(struct sk_buff *skb, struct net_device *dev)
 	WL_LOCK(wl);
 	pkt = PKTFRMNATIVE(wl->osh, skb);
 	if (!pkt) {
+		dev->stats.tx_dropped++;
+		wl_tx_flush(wlif);
 		WL_UNLOCK(wl);
 		dev_kfree_skb_any(skb);
 		return NETDEV_TX_OK;
 	}
 	if (WLPUB_WME(wl->pub) && PKTPRIO(pkt) == 0)
 		pktsetprio(pkt, FALSE);
-	wlc_sendpkt(wl->wlc, pkt, wlif->wlcif);	/* always consumes pkt */
+	if (READ_ONCE(tx_batch) && wl_tx_batch_eligible(pkt)) {
+		if (wlif->tx_head && !wl_tx_same_flow(wlif->tx_head, pkt))
+			wl_tx_flush(wlif);
+		PKTSETCHAINED(wl->osh, pkt);
+		PKTCSETCNT(pkt, 1);
+		PKTCSETLEN(pkt, PKTLEN(wl->osh, pkt));
+		if (wlif->tx_tail)
+			PKTSETCLINK(wlif->tx_tail, pkt);
+		else
+			wlif->tx_head = pkt;
+		wlif->tx_tail = pkt;
+		wlif->tx_count++;
+		wlif->tx_bytes += PKTLEN(wl->osh, pkt);
+		if (!netdev_xmit_more() || netif_queue_stopped(dev) || wlif->tx_count >= 16)
+			wl_tx_flush(wlif);
+	} else {
+		wl_tx_flush(wlif);
+		wlc_sendpkt(wl->wlc, pkt, wlif->wlcif); /* always consumes pkt */
+	}
 	WL_UNLOCK(wl);
 	return NETDEV_TX_OK;
 }
@@ -416,8 +526,13 @@ static int wl_register_if(wl_info_t *wl, wl_if_t *wlif, const u8 *addr)
 	dev->needed_tailroom = 32;
 	eth_hw_addr_set(dev, addr);
 	SET_NETDEV_DEV(dev, &wl->pdev->dev);
+	dev->features |= NETIF_F_GRO;
+	err = gro_cells_init(&wlif->gro_cells, dev);
+	if (err)
+		return err;
 	err = register_netdev(dev);
 	if (err) {
+		gro_cells_destroy(&wlif->gro_cells);
 		WL_ERROR((KERN_ERR "wl%d: register_netdev(%s) failed %d\n", wl->unit, wlif->name, err));
 		return err;
 	}
@@ -608,7 +723,16 @@ void wl_sendup(wl_info_t *wl, wl_if_t *wlif, void *p, int numpkt)
 		skb->protocol = eth_type_trans(skb, dev);
 		dev->stats.rx_packets++;
 		dev->stats.rx_bytes += skb->len;
-		netif_rx(skb);
+		/* GRO cells queue to NAPI; stack delivery happens after WL_LOCK is
+		 * released, so a reply through wl_start() cannot re-enter the lock.
+		 * Each netdev has its own cells, keeping virtual interfaces separate.
+		 */
+		if (READ_ONCE(rx_gro))
+			gro_cells_receive(&WL_DEV_IF(dev)->gro_cells, skb);
+		else if (wl->rx_batch)
+			list_add_tail(&skb->list, wl->rx_batch);
+		else
+			netif_rx(skb);
 		p = next;
 	}
 }
@@ -697,6 +821,7 @@ static irqreturn_t wl_isr(int irq, void *dev_id)
 	bool ours, wantdpc = FALSE;
 
 	WL_ISRLOCK(wl, flags);
+	wltrace_mark(WLT_IRQ, 0);
 	ours = wlc_isr(wl->wlc, &wantdpc);
 	if (ours && wantdpc)
 		tasklet_schedule(&wl->tasklet);
@@ -706,6 +831,7 @@ static irqreturn_t wl_isr(int irq, void *dev_id)
 
 static void wl_dpc(struct tasklet_struct *t)
 {
+	LIST_HEAD(received);
 	wl_info_t *wl = from_tasklet(wl, t, tasklet);
 
 	WL_LOCK(wl);
@@ -719,7 +845,10 @@ static void wl_dpc(struct tasklet_struct *t)
 		wlc_intrsupd(wl->wlc);
 		WL_ISRUNLOCK(wl, flags);
 	}
+	if (READ_ONCE(rx_batch))
+		wl->rx_batch = &received;
 	wl->resched = wlc_dpc(wl->wlc, TRUE, &wl->processed);
+	wl->rx_batch = NULL;
 	if (WLPUB_UP(wl->pub)) {
 		if (wl->resched)
 			tasklet_schedule(&wl->tasklet);
@@ -727,6 +856,12 @@ static void wl_dpc(struct tasklet_struct *t)
 			wl_intrson(wl);
 	}
 	WL_UNLOCK(wl);
+	/* Tasklets run in softirq context with IRQs enabled. Delivery can
+	 * generate a reply through wl_start(), so WL_LOCK must be released.
+	 * The local list is drained before the tasklet finishes; unregister
+	 * synchronizes networking readers before freeing a netdev.
+	 */
+	netif_receive_skb_list(&received);
 }
 
 /* ------------------------------------------------------------------ attach / detach */
@@ -736,6 +871,9 @@ static wl_info_t *wl_attach(uint16 vendor, uint16 device, ulong regs, struct pci
 	osl_t *osh;
 	wl_if_t *wlif;
 	uint err, unit = instance_base + wl_found;
+
+	BUILD_BUG_ON(offsetof(wl_info_t, ctf_compat) != 0x10);
+	BUILD_BUG_ON(offsetof(wl_info_t, dev) != 0x14);
 
 	osh = osl_attach(pdev, PCI_BUS, TRUE);
 	if (!osh)
@@ -765,6 +903,13 @@ static wl_info_t *wl_attach(uint16 vendor, uint16 device, ulong regs, struct pci
 		WL_ERROR((KERN_ERR "wl%d: ioremap failed\n", unit));
 		goto fail;
 	}
+#ifdef WLBLOB_TRACE
+	if (wltrace_replay && wltrace_replay_load(&pdev->dev, &vendor, &device))
+		goto fail;
+	wl->vendor = vendor; wl->device = device;
+	wltrace_set_ids(vendor, device);
+	wltrace_add_window(wl->regsva, PCI_BAR0_WINSZ);
+#endif
 
 	wl->wlc = wlc_attach(wl, vendor, device, unit, FALSE, osh, wl->regsva, PCI_BUS, pdev, &err);
 	if (!wl->wlc) {
@@ -815,8 +960,12 @@ static void wl_free(wl_info_t *wl)
 		timer_delete_sync(&t->timer);
 		kfree(t);
 	}
-	if (wl->regsva)
+	if (wl->regsva) {
+#ifdef WLBLOB_TRACE
+		wltrace_del_window(wl->regsva);
+#endif
 		iounmap(wl->regsva);
+	}
 	if (osl_malloced(wl->osh))
 		WL_ERROR((KERN_WARNING "wl%d: Memory leak of bytes %d\n", wl->unit, osl_malloced(wl->osh)));
 	osl_detach(wl->osh);

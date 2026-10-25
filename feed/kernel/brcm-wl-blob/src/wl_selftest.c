@@ -20,6 +20,7 @@ extern bool wl_del_timer(struct wl_info *wl, struct wl_timer *t);
 extern void wl_free_timer(struct wl_info *wl, struct wl_timer *t);
 extern struct wl_info *wl_selftest_alloc_wl(osl_t *osh);
 extern void wl_selftest_free_wl(struct wl_info *wl);
+extern bool wlblob_amsdu_pool_test_enabled(void);
 
 static int st_fail;
 #define CHECK(cond, fmt, ...) do { if (!(cond)) { st_fail++; printk(KERN_ERR "wl selftest FAIL: " fmt "\n", ##__VA_ARGS__); } } while (0)
@@ -90,6 +91,61 @@ int wl_selftest(struct pci_dev *pdev)
 	PKTFREE(osh, p, FALSE);
 	PKTFREE(osh, p3, FALSE);
 	CHECK(PKTALLOCED(osh) == 0, "pktalloced after dup/exp %u", PKTALLOCED(osh));
+
+	/* Reuse must reset blob metadata and native geometry, and must not alias
+	 * a clone or an skb handed to Linux.  Run with amsdu_pool=1 selftest=1.
+	 */
+	if (wlblob_amsdu_pool_test_enabled()) {
+		void *old;
+		p = PKTGET(osh, 192, TRUE);
+		CHECK(p != NULL, "header pool allocation");
+		if (p) {
+			old = p;
+			memset(WLSKB(p)->cb, 0xcc, sizeof(WLSKB(p)->cb));
+			PKTSETPRIO(p, 7);
+			PKTPULL(osh, p, 32);
+			/* dup synchronizes the native skb to the changed shadow. */
+			p2 = PKTDUP(osh, p);
+			CHECK(p2 != NULL, "header pool duplicate");
+			if (p2) PKTFREE(osh, p2, FALSE);
+			PKTFREE(osh, p, FALSE);
+			p = PKTGET(osh, 192, TRUE);
+			CHECK(p == old, "header pool did not reuse its buffer");
+			if (p) {
+				CHECK(PKTLEN(osh, p) == 192 && PKTPRIO(p) == 0 &&
+				      !memchr_inv(WLSKB(p)->cb, 0, sizeof(WLSKB(p)->cb)),
+				      "header pool metadata not reset");
+				CHECK(WLSKB(p)->native->data == PKTDATA(osh, p) &&
+				      WLSKB(p)->native->len == 192 && PKTHEADROOM(osh, p) >= 32,
+				      "header pool native geometry not reset");
+				memset(PKTDATA(osh, p), 0x5a, 192);
+				skb = skb_clone(WLSKB(p)->native, GFP_KERNEL);
+				CHECK(skb != NULL, "header pool clone");
+				PKTFREE(osh, p, FALSE);
+				p = PKTGET(osh, 192, TRUE);
+				CHECK(p != NULL, "header pool allocation after clone");
+				if (skb && p) {
+					memset(PKTDATA(osh, p), 0x11, 192);
+					CHECK(PKTDATA(osh, p) != skb->data && skb->data[0] == 0x5a,
+					      "header pool overwrote a live clone");
+				}
+				if (skb) dev_kfree_skb_any(skb);
+				if (p) {
+					skb = PKTTONATIVE(osh, p);
+					p = PKTGET(osh, 192, TRUE);
+					CHECK(p != NULL, "header pool allocation after tonative");
+					if (p) {
+						memset(PKTDATA(osh, p), 0x22, 192);
+						CHECK(PKTDATA(osh, p) != skb->data && skb->data[0] == 0x11,
+						      "header pool overwrote an escaped skb");
+						PKTFREE(osh, p, FALSE);
+					}
+					dev_kfree_skb_any(skb);
+				}
+			}
+		}
+		CHECK(PKTALLOCED(osh) == 0, "header pool live accounting %u", PKTALLOCED(osh));
+	}
 
 	/* 5. packet chaining (pktc) and the bcmutils packet queue */
 	p = PKTGET(osh, 100, TRUE); p2 = PKTGET(osh, 100, TRUE);

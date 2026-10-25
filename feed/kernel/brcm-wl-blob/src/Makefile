@@ -24,3 +24,5 @@ ccflags-y := -I$(src)/include -I$(src) -I$(src)/shared \
 ifeq ($(WLBLOB_VARIANT),ft)
 ccflags-y += -DWLSKB_LAYOUT_FT
 endif
+# keep the compiled shared code in .text too (no .text.fastpath): one text section for perf
+ccflags-y += -DBCMFASTPATH=

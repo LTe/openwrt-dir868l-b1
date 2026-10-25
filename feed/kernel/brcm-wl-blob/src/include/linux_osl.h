@@ -174,6 +174,13 @@ static inline void wl_outer_sync(void)
 		outer_cache.sync();
 #endif
 }
+#ifdef WLBLOB_TRACE
+#include "wltrace.h"
+#define R_REG(osh, r) ((__typeof(*(r)))wltrace_glue_read((const volatile void *)(r), sizeof(*(r))))
+#define W_REG(osh, r, v) do { \
+	wltrace_glue_write((volatile void *)(r), sizeof(*(r)), (uint32)(v)); \
+	wl_outer_sync(); } while (0)
+#else
 #define R_REG(osh, r) ({ \
 	__typeof(*(r)) __osl_v; \
 	switch (sizeof(*(r))) { \
@@ -189,6 +196,7 @@ static inline void wl_outer_sync(void)
 	default:             writel((uint32)(v), (volatile uint32*)(r)); break; \
 	} \
 	wl_outer_sync(); } while (0)
+#endif /* WLBLOB_TRACE */
 #define AND_REG(osh, r, v)	W_REG(osh, (r), R_REG(osh, r) & (v))
 #define OR_REG(osh, r, v)	W_REG(osh, (r), R_REG(osh, r) | (v))
 
